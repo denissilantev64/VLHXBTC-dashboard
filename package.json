@@ -1,0 +1,19 @@
+{
+  "name": "vlxhbtc-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/build_nav_btc_daily.js",
+    "hourly": "npm run build && node dist/export_token_price_hourly.js && node dist/fetch_btc_hourly.js && node dist/build_nav_btc_hourly.js",
+    "serve": "npx http-server public"
+  },
+  "dependencies": {
+    "ethers": "^6.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dHEDGE Vault NAV vs BTC Dashboard</title>
+    <meta name="data-nav-daily" content="data/nav_btc_daily.csv" />
+    <meta name="data-nav-hourly" content="data/nav_btc_hourly.csv" />
+    <meta name="github-owner" content="" />
+    <meta name="github-repo" content="" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.85) 100%);
+      }
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+      }
+      p.description {
+        margin: 0;
+        max-width: 640px;
+        color: #94a3b8;
+      }
+      .filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .filters button {
+        padding: 6px 12px;
+        border: 1px solid #334155;
+        border-radius: 999px;
+        background: rgba(51, 65, 85, 0.4);
+        color: inherit;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s ease;
+      }
+      .filters button:hover {
+        background: rgba(59, 130, 246, 0.25);
+        transform: translateY(-1px);
+      }
+      .filters button.active {
+        background: #38bdf8;
+        color: #0f172a;
+        border-color: transparent;
+        font-weight: 600;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .card {
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .card span.label {
+        font-size: 0.875rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .card span.value {
+        font-size: 1.75rem;
+        font-weight: 600;
+      }
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .chart {
+        height: 320px;
+        background: rgba(15, 23, 42, 0.8);
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        padding: 16px;
+      }
+      .chart h2 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .chart-container {
+        width: 100%;
+        height: calc(100% - 24px);
+      }
+      footer {
+        margin-top: 32px;
+        font-size: 0.75rem;
+        color: #64748b;
+      }
+      a {
+        color: #38bdf8;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js" defer></script>
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>dHEDGE Vault NAV vs BTC</h1>
+      <p class="description">
+        Hourly and daily net asset value per share (USD) for the dHEDGE vault at
+        0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9, benchmarked against Bitcoin (BTC/USD).
+        Data refreshes automatically every 10 minutes.
+      </p>
+      <div class="filters" role="group" aria-label="Select time range">
+        <button data-range="1D" class="active">1D</button>
+        <button data-range="1W">1W</button>
+        <button data-range="1M">1M</button>
+        <button data-range="3M">3M</button>
+        <button data-range="YTD">YTD</button>
+        <button data-range="ALL">ALL</button>
+      </div>
+    </header>
+    <section class="cards">
+      <div class="card" aria-live="polite">
+        <span class="label">ROI in BTC</span>
+        <span class="value" id="roi-btc">--</span>
+      </div>
+      <div class="card" aria-live="polite">
+        <span class="label">Alpha vs BTC</span>
+        <span class="value" id="alpha-btc">--</span>
+      </div>
+      <div class="card" aria-live="polite">
+        <span class="label">NAV in BTC</span>
+        <span class="value" id="nav-btc">--</span>
+      </div>
+    </section>
+    <section class="chart-grid">
+      <div class="chart">
+        <h2>ROI in BTC (%)</h2>
+        <div id="chart-roi-btc" class="chart-container"></div>
+      </div>
+      <div class="chart">
+        <h2>Alpha vs BTC (%)</h2>
+        <div id="chart-alpha" class="chart-container"></div>
+      </div>
+      <div class="chart">
+        <h2>NAV per Share (BTC)</h2>
+        <div id="chart-nav" class="chart-container"></div>
+      </div>
+    </section>
+    <footer>
+      Built with public data from CoinGecko and Arbitrum. Charts powered by ECharts. Updates every
+      hour and day via GitHub Actions.
+    </footer>
+  </body>
+</html>
