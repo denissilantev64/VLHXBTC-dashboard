@@ -286,7 +286,6 @@ function computeDifferenceSeries(navChanges, wbtcChanges) {
     })
     .filter(Boolean);
 }
-
 function setDeltaClass(element, value) {
   element.classList.remove('positive', 'negative');
   if (!Number.isFinite(value)) {
@@ -333,10 +332,12 @@ function createCommonChartOptions() {
   return {
     backgroundColor: COLORS.background,
     grid: {
+
       left: 52,
       right: 52,
       top: 48,
       bottom: 64,
+
     },
     textStyle: {
       color: COLORS.strongText,
@@ -346,6 +347,7 @@ function createCommonChartOptions() {
       type: 'time',
       axisLine: { lineStyle: { color: COLORS.grid } },
       axisLabel: { color: COLORS.subtleText, hideOverlap: true, padding: [8, 0, 0, 0] },
+
       splitLine: { show: false },
     },
     yAxis: {
@@ -421,6 +423,7 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }) {
         ],
       },
     },
+
   };
 }
 
@@ -449,6 +452,7 @@ function updatePriceChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [];
+
   option.xAxis.axisLabel.formatter = formatAxisDate;
   option.yAxis = [
     {
@@ -473,11 +477,13 @@ function updatePriceChart(filtered) {
       position: 'right',
     },
   ];
+
   option.tooltip.valueFormatter = (value) => formatCurrency(Number(value));
   option.series = [];
 
   if (wbtcSeries.length > 0) {
     option.legend.data.push(t.charts.price.series.wbtc);
+
     option.series.push(
       buildLineSeries({
         name: t.charts.price.series.wbtc,
@@ -486,10 +492,12 @@ function updatePriceChart(filtered) {
         yAxisIndex: 0,
       }),
     );
+
   }
 
   if (vlhxSeries.length > 0) {
     option.legend.data.push(t.charts.price.series.vlhx);
+
     option.series.push(
       buildLineSeries({
         name: t.charts.price.series.vlhx,
@@ -498,6 +506,7 @@ function updatePriceChart(filtered) {
         yAxisIndex: 1,
       }),
     );
+
   }
   chart.setOption(option, true);
 }
@@ -517,13 +526,16 @@ function updateChangeChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [];
+
   option.xAxis.axisLabel.formatter = formatAxisDate;
+
   option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
   option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
   option.series = [];
 
   if (wbtcChanges.length > 0) {
     option.legend.data.push(t.charts.change.series.wbtc);
+
     option.series.push(
       buildLineSeries({
         name: t.charts.change.series.wbtc,
@@ -531,10 +543,12 @@ function updateChangeChart(filtered) {
         color: COLORS.secondary,
       }),
     );
+
   }
 
   if (navChanges.length > 0) {
     option.legend.data.push(t.charts.change.series.vlhx);
+
     option.series.push(
       buildLineSeries({
         name: t.charts.change.series.vlhx,
@@ -542,6 +556,7 @@ function updateChangeChart(filtered) {
         color: COLORS.accent,
       }),
     );
+
   }
   chart.setOption(option, true);
 }
@@ -562,6 +577,7 @@ function updateDiffChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [t.charts.diff.series.diff];
+
   option.xAxis.axisLabel.formatter = formatAxisDate;
   option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
   option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
@@ -572,6 +588,7 @@ function updateDiffChart(filtered) {
       data: diffSeries,
       color: COLORS.warning,
     }),
+
   ];
   chart.setOption(option, true);
 }
@@ -596,14 +613,17 @@ async function loadData() {
     const wbtcRows = parseCsv(wbtcText);
     const wbtcMap = new Map(wbtcRows.map((row) => [row.day, parseNumber(row.wbtc_usd)]));
     state.daily = toDailyData(parseCsv(dailyText), wbtcMap);
+
     ensureRangeAvailability();
     updateFilterVisibility();
     updateFilterLabels();
+
     refreshUI();
   } catch (error) {
     console.error('Failed to load dashboard data', error);
   }
 }
+
 
 function hasDataForRange(rangeKey) {
   const config = RANGE_CONFIG[rangeKey];
@@ -646,6 +666,7 @@ function updateFilterVisibility() {
   });
 }
 
+
 function updateFilterLabels() {
   const t = getTranslations();
   document.querySelectorAll('.filters button').forEach((button) => {
@@ -669,7 +690,9 @@ function applyTranslations() {
   document.querySelector('[data-i18n="card-spread-label"]').textContent = t.cards.spread.label;
 
   updateFilterLabels();
+
   updateFilterVisibility();
+
   document.documentElement.setAttribute('lang', state.language);
 }
 
@@ -713,7 +736,9 @@ function initFilters() {
     });
   });
   updateFilterLabels();
+
   updateFilterVisibility();
+
 }
 
 function initLanguageSwitcher() {
