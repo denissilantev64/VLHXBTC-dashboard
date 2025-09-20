@@ -15,12 +15,16 @@ async function latestBlock(provider: JsonRpcProvider): Promise<{ number: number;
   return { number, timestamp: block.timestamp };
 }
 
-async function findBlockAtOrBefore(provider: JsonRpcProvider, targetTimestamp: number): Promise<number> {
+async function findBlockAtOrBefore(
+  provider: JsonRpcProvider,
+  targetTimestamp: number,
+  minBlock = 0,
+): Promise<number> {
   const { number: latestNumber, timestamp: latestTimestamp } = await latestBlock(provider);
   if (targetTimestamp >= latestTimestamp) {
     return latestNumber;
   }
-  let low = 0;
+  let low = Math.max(minBlock, 0);
   let high = latestNumber;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
@@ -64,11 +68,33 @@ export async function blockAtEndOfDayUTC(provider: JsonRpcProvider, date?: Date)
   return blockNumber;
 }
 
+export async function blockAtEndOfDayUTCWithHint(
+  provider: JsonRpcProvider,
+  date: Date,
+  minBlock?: number,
+): Promise<number> {
+  const target = endOfDayTimestamp(date);
+  const blockNumber = await findBlockAtOrBefore(provider, target, minBlock);
+  logger.info(`Resolved end-of-day block ${blockNumber} for ${date.toISOString().slice(0, 10)}`);
+  return blockNumber;
+}
+
 export async function blockAtEndOfHourUTC(provider: JsonRpcProvider, date: Date): Promise<number> {
   const target = endOfHourTimestamp(date);
   const blockNumber = await findBlockAtOrBefore(provider, target);
   logger.info(
     `Resolved end-of-hour block ${blockNumber} for ${date.toISOString().slice(0, 13)}:00Z`,
   );
+  return blockNumber;
+}
+
+export async function blockAtEndOfHourUTCWithHint(
+  provider: JsonRpcProvider,
+  date: Date,
+  minBlock?: number,
+): Promise<number> {
+  const target = endOfHourTimestamp(date);
+  const blockNumber = await findBlockAtOrBefore(provider, target, minBlock);
+  logger.info(`Resolved end-of-hour block ${blockNumber} for ${date.toISOString().slice(0, 13)}:00Z`);
   return blockNumber;
 }

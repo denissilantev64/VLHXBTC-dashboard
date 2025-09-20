@@ -10,7 +10,8 @@
     "serve": "npx http-server public"
   },
   "dependencies": {
-    "ethers": "^6.11.1"
+    "ethers": "^6.11.1",
+    "global-agent": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
