@@ -1,6 +1,7 @@
 import { JsonRpcProvider, Network } from 'ethers';
 import { ARBITRUM_RPC, ARBITRUM_RPC_FALLBACKS } from '../config.js';
 import { logger } from './log.js';
+import { initGlobalProxy } from './proxy.js';
 
 export function createProvider(url: string): JsonRpcProvider {
   const network = Network.from(42161);
@@ -14,6 +15,7 @@ export function getProviderUrls(): string[] {
 }
 
 export function buildProviderSequence(): JsonRpcProvider[] {
+  initGlobalProxy();
   const urls = getProviderUrls();
   if (urls.length === 0) {
     throw new Error('No RPC URLs configured');
