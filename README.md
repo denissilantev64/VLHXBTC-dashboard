@@ -60,9 +60,16 @@ Create a `.env` or add these variables in GitHub Secrets to use premium endpoint
 
 One workflow lives under `.github/workflows/`:
 
-- `daily.yml` — runs daily at 23:20 UTC and via manual dispatch. Executes daily NAV + BTC + WBTC fetchers, builds daily metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
+- `daily.yml` — runs once per day at 23:00 UTC and via manual dispatch. It executes the NAV/BTC/WBTC collectors, derives metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
 
-The workflow configures `user.name`/`user.email`, only commits when data changes, and pushes to `main`.
+### Publishing to GitHub Pages
+
+1. Open **Settings → Pages** inside this repository and set **Source = GitHub Actions**. This only needs to be done once.
+2. Trigger the workflow the first time via **Actions → Daily Data Update → Run workflow** (the scheduled cron run will handle subsequent days).
+3. Wait for the `Deploy to GitHub Pages` job to finish — the Pages status badge in the run turns green when deployment succeeds.
+4. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
+
+After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/`.
 
 ## Dashboard
 
