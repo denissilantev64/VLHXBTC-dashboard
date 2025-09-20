@@ -2,6 +2,7 @@ import { Contract, JsonRpcProvider, formatUnits } from 'ethers';
 import {
   DAILY_NAV_CSV,
   POOL_LOGIC_ADDRESS,
+  TOKEN_PRICE_START_DATE,
 } from './config.js';
 import { blockAtEndOfDayUTC } from './utils/arb.js';
 import { upsertRows, readCSV, type CSVRow } from './utils/csv.js';
@@ -64,6 +65,10 @@ function determineDaysToFetch(existing: DayPrice[]): string[] {
   const existingSet = new Set(existing.map((row) => row.day));
   const now = new Date();
   const endDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
+  const earliestDate = parseDay(TOKEN_PRICE_START_DATE);
+  if (endDate.getTime() < earliestDate.getTime()) {
+    return [];
+  }
   if (endDate.getTime() < 0) {
     return [];
   }
@@ -73,6 +78,12 @@ function determineDaysToFetch(existing: DayPrice[]): string[] {
   } else {
     const lastDay = existing[existing.length - 1].day;
     startDate = addDays(parseDay(lastDay), 1);
+  }
+  if (startDate.getTime() < earliestDate.getTime()) {
+    startDate = new Date(earliestDate.getTime());
+  }
+  if (startDate.getTime() > endDate.getTime()) {
+    return [];
   }
   const days: string[] = [];
   for (let d = new Date(startDate.getTime()); d <= endDate; d = addDays(d, 1)) {
