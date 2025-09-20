@@ -1,11 +1,12 @@
 const RANGE_CONFIG = {
   '1D': { days: 1 },
-  '1W': { days: 7 },
   '1M': { days: 30 },
   '3M': { days: 90 },
-  YTD: { ytd: true },
+  '6M': { days: 180 },
   ALL: { all: true },
 };
+
+const RANGE_ORDER = ['1D', '1M', '3M', '6M', 'ALL'];
 
 const TRANSLATIONS = {
   ru: {
@@ -15,10 +16,9 @@ const TRANSLATIONS = {
     footer: 'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
     filters: {
       '1D': '1Д',
-      '1W': '1Н',
       '1M': '1М',
       '3M': '3М',
-      YTD: 'СГ',
+      '6M': '6М',
       ALL: 'Всё',
     },
     cards: {
@@ -56,10 +56,9 @@ const TRANSLATIONS = {
     footer: 'Data is sourced from public feeds (CoinGecko, Arbitrum) and updates daily. Visualised with ECharts.',
     filters: {
       '1D': '1D',
-      '1W': '1W',
       '1M': '1M',
       '3M': '3M',
-      YTD: 'YTD',
+      '6M': '6M',
       ALL: 'All',
     },
     cards: {
@@ -93,14 +92,17 @@ const TRANSLATIONS = {
 };
 
 const COLORS = {
-  accent: '#00e0ff',
-  secondary: '#7b61ff',
-  danger: '#ff6b6b',
-  background: 'rgba(17, 17, 26, 0.9)',
-  grid: 'rgba(255, 255, 255, 0.08)',
-  subtleText: '#7c7c8f',
-  strongText: '#f5f5f5',
+  accent: '#00a0d0',
+  secondary: '#ffffff',
+  warning: '#f7931a',
+  background: '#000000',
+  grid: '#1f1f1f',
+  subtleText: '#b3b3b3',
+  strongText: '#ffffff',
 };
+
+const LEGEND_LINE_ICON = 'path://M4 10 L28 10';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const state = {
   daily: [],
@@ -218,16 +220,16 @@ function toDailyData(rows, wbtcMap = new Map()) {
 function filterData(rangeKey) {
   const config = RANGE_CONFIG[rangeKey] || RANGE_CONFIG.ALL;
   const dataset = state.daily;
-  if (config.all || dataset.length === 0) {
+  if (dataset.length === 0) {
     return dataset;
   }
-  const now = new Date();
-  if (config.ytd) {
-    const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-    return dataset.filter((row) => row.date >= start);
+  if (config.all) {
+    return dataset;
   }
+  const lastDate = dataset[dataset.length - 1].date;
   if (config.days) {
-    const start = new Date(now.getTime() - config.days * 24 * 60 * 60 * 1000);
+    const offsetDays = Math.max(config.days - 1, 0);
+    const start = new Date(lastDate.getTime() - offsetDays * DAY_MS);
     return dataset.filter((row) => row.date >= start);
   }
   return dataset;
@@ -284,7 +286,6 @@ function computeDifferenceSeries(navChanges, wbtcChanges) {
     })
     .filter(Boolean);
 }
-
 function setDeltaClass(element, value) {
   element.classList.remove('positive', 'negative');
   if (!Number.isFinite(value)) {
@@ -331,10 +332,12 @@ function createCommonChartOptions() {
   return {
     backgroundColor: COLORS.background,
     grid: {
-      left: 48,
-      right: 24,
-      top: 32,
-      bottom: 48,
+
+      left: 52,
+      right: 52,
+      top: 48,
+      bottom: 64,
+
     },
     textStyle: {
       color: COLORS.strongText,
@@ -343,7 +346,8 @@ function createCommonChartOptions() {
     xAxis: {
       type: 'time',
       axisLine: { lineStyle: { color: COLORS.grid } },
-      axisLabel: { color: COLORS.subtleText },
+      axisLabel: { color: COLORS.subtleText, hideOverlap: true, padding: [8, 0, 0, 0] },
+
       splitLine: { show: false },
     },
     yAxis: {
@@ -361,9 +365,65 @@ function createCommonChartOptions() {
     },
     legend: {
       top: 0,
-      textStyle: { color: COLORS.subtleText },
+      textStyle: { color: COLORS.subtleText, fontSize: 12 },
+      icon: LEGEND_LINE_ICON,
+      itemWidth: 24,
+      itemHeight: 6,
     },
-    color: [COLORS.accent, COLORS.secondary, COLORS.danger],
+    color: [COLORS.accent, COLORS.secondary, COLORS.warning],
+  };
+}
+
+function formatAxisDate(value) {
+  const locale = getLocale();
+  const date = new Date(value);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const formatted = new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+  }).format(date);
+  const normalized = formatted.replace(/\u00a0/g, ' ');
+  return normalized.replace('.', '').replace(' ', '\n');
+}
+
+function hexToRgba(hex, alpha) {
+  const sanitized = hex.replace('#', '');
+  if (sanitized.length !== 6) {
+    return hex;
+  }
+  const bigint = parseInt(sanitized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function buildLineSeries({ name, data, color, yAxisIndex = 0 }) {
+  return {
+    name,
+    type: 'line',
+    smooth: true,
+    showSymbol: false,
+    data,
+    yAxisIndex,
+    color,
+    lineStyle: { width: 2, color },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [
+          { offset: 0, color: hexToRgba(color, 0.18) },
+          { offset: 1, color: hexToRgba(color, 0) },
+        ],
+      },
+    },
+
   };
 }
 
@@ -392,35 +452,61 @@ function updatePriceChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [];
-  option.yAxis.axisLabel.formatter = (value) =>
-    new Intl.NumberFormat(locale, { maximumFractionDigits: value < 2 ? 4 : 0 }).format(value);
+
+  option.xAxis.axisLabel.formatter = formatAxisDate;
+  option.yAxis = [
+    {
+      type: 'value',
+      axisLine: { show: false },
+      axisLabel: {
+        color: COLORS.subtleText,
+        formatter: (value) =>
+          new Intl.NumberFormat(locale, { maximumFractionDigits: value < 200 ? 2 : 0 }).format(value),
+      },
+      splitLine: { lineStyle: { color: COLORS.grid } },
+    },
+    {
+      type: 'value',
+      axisLine: { show: false },
+      axisLabel: {
+        color: COLORS.subtleText,
+        formatter: (value) =>
+          new Intl.NumberFormat(locale, { maximumFractionDigits: value < 2 ? 4 : 2 }).format(value),
+      },
+      splitLine: { show: false },
+      position: 'right',
+    },
+  ];
+
   option.tooltip.valueFormatter = (value) => formatCurrency(Number(value));
   option.series = [];
 
   if (wbtcSeries.length > 0) {
     option.legend.data.push(t.charts.price.series.wbtc);
-    option.series.push({
-      name: t.charts.price.series.wbtc,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: wbtcSeries,
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.08 },
-    });
+
+    option.series.push(
+      buildLineSeries({
+        name: t.charts.price.series.wbtc,
+        data: wbtcSeries,
+        color: COLORS.secondary,
+        yAxisIndex: 0,
+      }),
+    );
+
   }
 
   if (vlhxSeries.length > 0) {
     option.legend.data.push(t.charts.price.series.vlhx);
-    option.series.push({
-      name: t.charts.price.series.vlhx,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: vlhxSeries,
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.08 },
-    });
+
+    option.series.push(
+      buildLineSeries({
+        name: t.charts.price.series.vlhx,
+        data: vlhxSeries,
+        color: COLORS.accent,
+        yAxisIndex: 1,
+      }),
+    );
+
   }
   chart.setOption(option, true);
 }
@@ -440,34 +526,37 @@ function updateChangeChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [];
+
+  option.xAxis.axisLabel.formatter = formatAxisDate;
+
   option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
   option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
   option.series = [];
 
   if (wbtcChanges.length > 0) {
     option.legend.data.push(t.charts.change.series.wbtc);
-    option.series.push({
-      name: t.charts.change.series.wbtc,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: wbtcChanges.map((item) => [item.timestamp, item.change]),
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.08 },
-    });
+
+    option.series.push(
+      buildLineSeries({
+        name: t.charts.change.series.wbtc,
+        data: wbtcChanges.map((item) => [item.timestamp, item.change]),
+        color: COLORS.secondary,
+      }),
+    );
+
   }
 
   if (navChanges.length > 0) {
     option.legend.data.push(t.charts.change.series.vlhx);
-    option.series.push({
-      name: t.charts.change.series.vlhx,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: navChanges.map((item) => [item.timestamp, item.change]),
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.08 },
-    });
+
+    option.series.push(
+      buildLineSeries({
+        name: t.charts.change.series.vlhx,
+        data: navChanges.map((item) => [item.timestamp, item.change]),
+        color: COLORS.accent,
+      }),
+    );
+
   }
   chart.setOption(option, true);
 }
@@ -488,19 +577,18 @@ function updateDiffChart(filtered) {
 
   const option = createCommonChartOptions();
   option.legend.data = [t.charts.diff.series.diff];
+
+  option.xAxis.axisLabel.formatter = formatAxisDate;
   option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
   option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
-  option.color = [COLORS.accent];
+  option.color = [COLORS.warning];
   option.series = [
-    {
+    buildLineSeries({
       name: t.charts.diff.series.diff,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
       data: diffSeries,
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.12 },
-    },
+      color: COLORS.warning,
+    }),
+
   ];
   chart.setOption(option, true);
 }
@@ -525,11 +613,59 @@ async function loadData() {
     const wbtcRows = parseCsv(wbtcText);
     const wbtcMap = new Map(wbtcRows.map((row) => [row.day, parseNumber(row.wbtc_usd)]));
     state.daily = toDailyData(parseCsv(dailyText), wbtcMap);
+
+    ensureRangeAvailability();
+    updateFilterVisibility();
+    updateFilterLabels();
+
     refreshUI();
   } catch (error) {
     console.error('Failed to load dashboard data', error);
   }
 }
+
+
+function hasDataForRange(rangeKey) {
+  const config = RANGE_CONFIG[rangeKey];
+  const dataset = state.daily;
+  if (!config || dataset.length === 0) {
+    return false;
+  }
+  if (config.all) {
+    return true;
+  }
+  if (config.days) {
+    const lastDate = dataset[dataset.length - 1].date;
+    const start = new Date(lastDate.getTime() - Math.max(config.days - 1, 0) * DAY_MS);
+    return dataset.some((row) => row.date <= start);
+  }
+  return false;
+}
+
+function ensureRangeAvailability() {
+  const available = RANGE_ORDER.filter((key) => hasDataForRange(key));
+  if (!available.includes(state.range)) {
+    state.range = available[0] || 'ALL';
+  }
+  return available;
+}
+
+function updateFilterVisibility() {
+  if (state.daily.length === 0) {
+    document.querySelectorAll('.filters button').forEach((button) => {
+      button.classList.remove('hidden');
+    });
+    return;
+  }
+  const available = ensureRangeAvailability();
+  const availableSet = new Set(available);
+  document.querySelectorAll('.filters button').forEach((button) => {
+    const range = button.dataset.range;
+    const isAvailable = availableSet.has(range);
+    button.classList.toggle('hidden', !isAvailable);
+  });
+}
+
 
 function updateFilterLabels() {
   const t = getTranslations();
@@ -554,6 +690,9 @@ function applyTranslations() {
   document.querySelector('[data-i18n="card-spread-label"]').textContent = t.cards.spread.label;
 
   updateFilterLabels();
+
+  updateFilterVisibility();
+
   document.documentElement.setAttribute('lang', state.language);
 }
 
@@ -597,6 +736,9 @@ function initFilters() {
     });
   });
   updateFilterLabels();
+
+  updateFilterVisibility();
+
 }
 
 function initLanguageSwitcher() {
