@@ -62,7 +62,13 @@ One workflow lives under `.github/workflows/`:
 
 - `daily.yml` — runs daily at 23:20 UTC and via manual dispatch. Executes daily NAV + BTC + WBTC fetchers, builds daily metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
 
-The workflow configures `user.name`/`user.email`, only commits when data changes, and pushes to `main`.
+The workflow configures `user.name`/`user.email`, only commits when data changes, and pushes to `main`. To host the dashboard:
+
+1. Open **Settings → Pages** in this repository.
+2. Set the source to **GitHub Actions**.
+3. (Optional) Add repository secrets for premium RPC or HTTP proxies (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`).
+
+After the first successful workflow run, the site is published at `https://<owner>.github.io/<repo>/` with CSV downloads under `/data/`.
 
 ## Dashboard
 

@@ -5,6 +5,10 @@ on:
     - cron: '20 23 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   daily:
     runs-on: ubuntu-latest
@@ -14,16 +18,14 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
       - run: npm ci
-      - run: npm run build
-      - run: node dist/export_token_price_daily.js
-      - run: node dist/fetch_btc_daily.js
-      - run: node dist/fetch_wbtc_daily.js
-      - run: node dist/build_nav_btc_daily.js
+      - run: npm run daily
       - name: Commit and push CSV updates
         run: |
           if git status --porcelain data | grep .; then
@@ -41,6 +43,8 @@ jobs:
           cp -r public/* pages/
           mkdir -p pages/data
           cp data/*.csv pages/data/
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
