@@ -1,12 +1,12 @@
 import { Contract, JsonRpcProvider, formatUnits } from 'ethers';
 import { HOURLY_NAV_CSV, POOL_LOGIC_ADDRESS, TOKEN_PRICE_START_DATE } from './config.js';
-import { blockAtEndOfHourUTC } from './utils/arb.js';
+import { blockAtEndOfHourUTC, blockAtEndOfHourUTCWithHint } from './utils/arb.js';
 import { readCSV, upsertRows, type CSVRow } from './utils/csv.js';
 import { logger } from './utils/log.js';
 import { buildProviderSequence } from './utils/provider.js';
 
 const ABI = ['function tokenPrice() view returns (uint256)'];
-const MAX_BACKFILL_HOURS = 72;
+const MAX_BACKFILL_HOURS = 720;
 const SANITY_TOLERANCE = 0.1;
 
 interface HourPrice extends CSVRow {
@@ -78,35 +78,26 @@ function determineHoursToFetch(existing: HourPrice[]): string[] {
   if (endHour.getTime() < earliestHour.getTime()) {
     return [];
   }
-  let startHour: Date;
-  if (existing.length === 0) {
-    startHour = addHours(endHour, -MAX_BACKFILL_HOURS + 1);
-  } else {
-    const lastTs = existing[existing.length - 1].ts;
-    startHour = addHours(parseHour(lastTs), 1);
-  }
-  if (startHour.getTime() < earliestHour.getTime()) {
-    startHour = new Date(earliestHour.getTime());
-  }
-  if (startHour.getTime() > endHour.getTime()) {
-    return [];
-  }
-  const hours: string[] = [];
-  for (let cursor = new Date(startHour.getTime()); cursor <= endHour; cursor = addHours(cursor, 1)) {
+  const missing: string[] = [];
+  for (let cursor = new Date(earliestHour.getTime()); cursor <= endHour; cursor = addHours(cursor, 1)) {
     const key = isoHour(cursor);
     if (!existingSet.has(key)) {
-      hours.push(key);
+      missing.push(key);
     }
   }
-  return hours;
+  if (missing.length === 0) {
+    return [];
+  }
+  return missing.slice(0, MAX_BACKFILL_HOURS);
 }
 
 async function fetchTokenPrice(
   provider: JsonRpcProvider,
   contract: Contract,
   ts: string,
+  blockHint?: number,
 ): Promise<number> {
-  const block = await blockAtEndOfHourUTC(provider, parseHour(ts));
+  const block = blockHint ?? (await blockAtEndOfHourUTC(provider, parseHour(ts)));
   const price = await contract.tokenPrice({ blockTag: block });
   const numeric = Number(formatUnits(price, 18));
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -129,13 +120,17 @@ async function main(): Promise<void> {
   }
   const providers = buildProviderSequence();
   const contracts = providers.map((provider) => new Contract(POOL_LOGIC_ADDRESS, ABI, provider));
+  const blockHints: Array<number | null> = providers.map(() => null);
   const history = [...existing];
   const newRows: HourPrice[] = [];
   for (const ts of targets) {
     let fetched: number | null = null;
     for (let i = 0; i < providers.length; i += 1) {
       try {
-        const value = await fetchTokenPrice(providers[i], contracts[i], ts);
+        const hint = blockHints[i] ?? undefined;
+        const block = await blockAtEndOfHourUTCWithHint(providers[i], parseHour(ts), hint);
+        blockHints[i] = block;
+        const value = await fetchTokenPrice(providers[i], contracts[i], ts, block);
         const candidate: HourPrice = { ts, token_price_usd: value.toFixed(8) };
         if (!passesSanityCheck([...history, ...newRows], candidate)) {
           throw new Error('Sanity check failed (>10% deviation from rolling median)');
