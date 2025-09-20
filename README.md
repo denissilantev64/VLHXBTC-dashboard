@@ -4,8 +4,8 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 
 ## Features
 
-- Hourly and daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
-- Hourly (90 days) and daily (full history) BTC/USD prices from CoinGecko with ETag-aware caching.
+- Daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
+- Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
 - Production-ready GitHub Actions that backfill data, append new rows, commit updates, and deploy GitHub Pages.
 - Lightweight static dashboard (ECharts) with preset time range filters (1D/1W/1M/3M/YTD/ALL) that reads CSVs directly from the repository.
@@ -26,27 +26,22 @@ npm install
 
 ### Local Data Export
 
-Run the daily and hourly jobs locally. The first run backfills 365 days of NAV data and 72 hours of hourly NAV data.
+Run the daily jobs locally. The first run backfills 365 days of NAV data.
 
 ```bash
 # Build TypeScript -> dist/
 npm run build
 
-# Run daily collectors (NAV, BTC, derived metrics)
+# Run daily collectors (NAV, BTC, WBTC, derived metrics)
 npm run daily
-
-# Run hourly collectors (NAV, BTC, derived metrics)
-npm run hourly
 ```
 
 CSV outputs are written into the `data/` directory:
 
 - `data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
-- `data/nav_tokenprice_usd_hourly.csv` — `ts,token_price_usd`
 - `data/btc_usd_daily.csv` — `day,btc_usd`
-- `data/btc_usd_hourly.csv` — `ts,btc_usd`
+- `data/wbtc_usd_daily.csv` — `day,wbtc_usd`
 - `data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
-- `data/nav_btc_hourly.csv` — `ts,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
 
 All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
@@ -63,12 +58,11 @@ Create a `.env` or add these variables in GitHub Secrets to use premium endpoint
 
 ## GitHub Actions
 
-Two workflows live under `.github/workflows/`:
+One workflow lives under `.github/workflows/`:
 
-- `hourly.yml` — runs every hour (`0 * * * *`) and via manual dispatch. Executes hourly NAV + BTC fetchers and derived metric builder, then commits updated CSVs.
-- `daily.yml` — runs daily at 23:20 UTC and via manual dispatch. Executes daily NAV + BTC fetchers, builds daily metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
+- `daily.yml` — runs daily at 23:20 UTC and via manual dispatch. Executes daily NAV + BTC + WBTC fetchers, builds daily metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
 
-Both workflows configure `user.name`/`user.email`, only commit when data changes, and push to `main`.
+The workflow configures `user.name`/`user.email`, only commits when data changes, and pushes to `main`.
 
 ## Dashboard
 
@@ -86,7 +80,7 @@ The dashboard loads CSVs from the repository using raw GitHub URLs. When hosted 
 
 ### Chart Controls & Cards
 
-- **Time ranges** — 1D/1W use hourly data; longer ranges use daily data.
+- **Time ranges** — presets filter the daily dataset to common windows (1D/1W/1M/3M/YTD/ALL).
 - **Summary cards** — show the latest ROI in BTC, alpha vs BTC, and NAV denominated in BTC.
 - **Auto refresh** — refreshes data every 10 minutes.
 
@@ -94,8 +88,8 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 
 ## Data Sources & Caveats
 
-- On-chain NAV: PoolLogic contract `tokenPrice()` on Arbitrum One (`0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9`). Binary search selects the block at each hour/day cutoff.
-- BTC/USD: CoinGecko `market_chart` API with ETag caching to minimize rate limits.
+- On-chain NAV: PoolLogic contract `tokenPrice()` on Arbitrum One (`0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9`). Binary search selects the block at each day cutoff.
+- BTC/USD & WBTC/USD: CoinGecko `market_chart` API with ETag caching and automatic fallback to CryptoCompare when needed.
 - Sanity checks reject NAV points deviating more than ±10% from recent medians and fall back to additional RPCs when available.
 - All timestamps are UTC.
 
@@ -112,7 +106,7 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 ├── public/                 # Static dashboard deployed to GitHub Pages
 ├── src/                    # TypeScript source for exporters and builders
 ├── dist/                   # Compiled JS (ignored until `npm run build`)
-└── .github/workflows/      # GitHub Actions for hourly & daily automation
+└── .github/workflows/      # GitHub Actions for daily automation
 ```
 
 ## License
