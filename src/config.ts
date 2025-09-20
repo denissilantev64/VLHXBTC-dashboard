@@ -12,3 +12,4 @@ export const HOURLY_BTC_CSV = 'data/btc_usd_hourly.csv';
 export const DAILY_NAV_BTC_CSV = 'data/nav_btc_daily.csv';
 export const HOURLY_NAV_BTC_CSV = 'data/nav_btc_hourly.csv';
 export const TOKEN_PRICE_START_DATE = process.env.TOKEN_PRICE_START_DATE ?? '2025-07-23';
+
