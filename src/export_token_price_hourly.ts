@@ -1,5 +1,5 @@
 import { Contract, JsonRpcProvider, formatUnits } from 'ethers';
-import { HOURLY_NAV_CSV, POOL_LOGIC_ADDRESS } from './config.js';
+import { HOURLY_NAV_CSV, POOL_LOGIC_ADDRESS, TOKEN_PRICE_START_DATE } from './config.js';
 import { blockAtEndOfHourUTC } from './utils/arb.js';
 import { readCSV, upsertRows, type CSVRow } from './utils/csv.js';
 import { logger } from './utils/log.js';
@@ -74,12 +74,22 @@ function determineHoursToFetch(existing: HourPrice[]): string[] {
   const existingSet = new Set(existing.map((row) => row.ts));
   const now = new Date();
   const endHour = addHours(startOfHour(now), -1);
+  const earliestHour = startOfHour(new Date(`${TOKEN_PRICE_START_DATE}T00:00:00Z`));
+  if (endHour.getTime() < earliestHour.getTime()) {
+    return [];
+  }
   let startHour: Date;
   if (existing.length === 0) {
     startHour = addHours(endHour, -MAX_BACKFILL_HOURS + 1);
   } else {
     const lastTs = existing[existing.length - 1].ts;
     startHour = addHours(parseHour(lastTs), 1);
+  }
+  if (startHour.getTime() < earliestHour.getTime()) {
+    startHour = new Date(earliestHour.getTime());
+  }
+  if (startHour.getTime() > endHour.getTime()) {
+    return [];
   }
   const hours: string[] = [];
   for (let cursor = new Date(startHour.getTime()); cursor <= endHour; cursor = addHours(cursor, 1)) {
