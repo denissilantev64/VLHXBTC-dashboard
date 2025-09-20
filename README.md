@@ -62,6 +62,7 @@ One workflow lives under `.github/workflows/`:
 
 - `daily.yml` — runs once per day at 23:00 UTC and via manual dispatch. It executes the NAV/BTC/WBTC collectors, derives metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
 
+
 ### Publishing to GitHub Pages
 
 1. Open **Settings → Pages** inside this repository and set **Source = GitHub Actions**. This only needs to be done once.
@@ -70,6 +71,7 @@ One workflow lives under `.github/workflows/`:
 4. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
 After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/`.
+
 
 ## Dashboard
 
