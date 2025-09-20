@@ -7,11 +7,115 @@ const RANGE_CONFIG = {
   ALL: { all: true },
 };
 
+const TRANSLATIONS = {
+  ru: {
+    title: 'Valhalla BTC против WBTC',
+    description:
+      'Ежедневные данные фонда Valhalla BTC, сравнение с динамикой WBTC. Информация обновляется автоматически каждые 10 минут.',
+    footer: 'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
+    filters: {
+      '1D': '1Д',
+      '1W': '1Н',
+      '1M': '1М',
+      '3M': '3М',
+      YTD: 'СГ',
+      ALL: 'Всё',
+    },
+    cards: {
+      vlhx: { label: 'VLHXBTC', change: 'Изменение за период' },
+      wbtc: { label: 'WBTC', change: 'Изменение за период' },
+      spread: { label: 'Разница в изменении', note: 'Изменение VLHXBTC минус изменение WBTC' },
+    },
+    charts: {
+      price: {
+        title: 'Цена WBTC и VLHXBTC (USD)',
+        series: {
+          wbtc: 'Цена WBTC',
+          vlhx: 'Цена VLHXBTC',
+        },
+      },
+      change: {
+        title: 'Изменение цен WBTC и VLHXBTC (%)',
+        series: {
+          wbtc: 'Изменение WBTC',
+          vlhx: 'Изменение VLHXBTC',
+        },
+      },
+      diff: {
+        title: 'Разница изменения (%)',
+        series: {
+          diff: 'Разница изменений',
+        },
+      },
+    },
+  },
+  en: {
+    title: 'Valhalla BTC vs WBTC',
+    description:
+      'Daily metrics for the Valhalla BTC fund benchmarked against WBTC. Data refreshes automatically every 10 minutes.',
+    footer: 'Data is sourced from public feeds (CoinGecko, Arbitrum) and updates daily. Visualised with ECharts.',
+    filters: {
+      '1D': '1D',
+      '1W': '1W',
+      '1M': '1M',
+      '3M': '3M',
+      YTD: 'YTD',
+      ALL: 'All',
+    },
+    cards: {
+      vlhx: { label: 'VLHXBTC', change: 'Change over period' },
+      wbtc: { label: 'WBTC', change: 'Change over period' },
+      spread: { label: 'Performance spread', note: 'VLHXBTC change minus WBTC change' },
+    },
+    charts: {
+      price: {
+        title: 'WBTC and VLHXBTC Price (USD)',
+        series: {
+          wbtc: 'WBTC Price',
+          vlhx: 'VLHXBTC Price',
+        },
+      },
+      change: {
+        title: 'WBTC and VLHXBTC Price Change (%)',
+        series: {
+          wbtc: 'WBTC Change',
+          vlhx: 'VLHXBTC Change',
+        },
+      },
+      diff: {
+        title: 'Change Difference (%)',
+        series: {
+          diff: 'Change spread',
+        },
+      },
+    },
+  },
+};
+
+const COLORS = {
+  accent: '#00e0ff',
+  secondary: '#7b61ff',
+  danger: '#ff6b6b',
+  background: 'rgba(17, 17, 26, 0.9)',
+  grid: 'rgba(255, 255, 255, 0.08)',
+  subtleText: '#7c7c8f',
+  strongText: '#f5f5f5',
+};
+
 const state = {
   daily: [],
   range: '1D',
   charts: {},
+  language: 'ru',
 };
+
+function getTranslations() {
+  return TRANSLATIONS[state.language] || TRANSLATIONS.ru;
+}
+
+function getLocale() {
+  return state.language === 'ru' ? 'ru-RU' : 'en-US';
+}
 
 function getMetaContent(name) {
   const el = document.querySelector(`meta[name="${name}"]`);
@@ -83,23 +187,41 @@ function parseCsv(text) {
   return rows;
 }
 
-function toDailyData(rows) {
-  return rows.map((row) => ({
-    date: new Date(`${row.day}T00:00:00Z`),
-    nav_btc: Number(row.nav_btc),
-    roi_in_btc: Number(row.roi_in_btc) * 100,
-    roi_in_usd: Number(row.roi_in_usd) * 100,
-    alpha_vs_btc: Number(row.alpha_vs_btc) * 100,
-  }));
+function parseNumber(value) {
+  if (value === undefined || value === null || value === '') {
+    return Number.NaN;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : Number.NaN;
+}
+
+function toDailyData(rows, wbtcMap = new Map()) {
+  return rows
+    .map((row) => {
+      const date = new Date(`${row.day}T00:00:00Z`);
+      return {
+        date,
+        isoDate: row.day,
+        nav_usd: parseNumber(row.nav_usd),
+        nav_btc: parseNumber(row.nav_btc),
+        roi_in_btc: parseNumber(row.roi_in_btc) * 100,
+        roi_in_usd: parseNumber(row.roi_in_usd) * 100,
+        alpha_vs_btc: parseNumber(row.alpha_vs_btc) * 100,
+        btc_usd: parseNumber(row.btc_usd),
+        wbtc_usd: parseNumber(wbtcMap.get(row.day)),
+      };
+    })
+    .filter((row) => row.date instanceof Date && !Number.isNaN(row.date.getTime()))
+    .sort((a, b) => a.date - b.date);
 }
 
 function filterData(rangeKey) {
-  const config = RANGE_CONFIG[rangeKey] || RANGE_CONFIG['ALL'];
-  const now = new Date();
+  const config = RANGE_CONFIG[rangeKey] || RANGE_CONFIG.ALL;
   const dataset = state.daily;
   if (config.all || dataset.length === 0) {
     return dataset;
   }
+  const now = new Date();
   if (config.ytd) {
     const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
     return dataset.filter((row) => row.date >= start);
@@ -111,138 +233,388 @@ function filterData(rangeKey) {
   return dataset;
 }
 
-function formatPercent(value) {
+function formatCurrency(value) {
   if (!Number.isFinite(value)) {
     return '--';
   }
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  return new Intl.NumberFormat(getLocale(), {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: value < 2 ? 4 : 2,
+  }).format(value);
 }
 
-function formatBtc(value) {
+function formatPercent(value, digits = 2) {
   if (!Number.isFinite(value)) {
     return '--';
   }
-  return `${value.toFixed(8)} BTC`;
+  const formatted = value.toFixed(digits);
+  return `${value > 0 ? '+' : ''}${formatted}%`;
 }
 
-function updateCards() {
-  const source = state.daily;
-  if (source.length === 0) {
+function computeChange(start, end) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start === 0) {
+    return Number.NaN;
+  }
+  return ((end - start) / Math.abs(start)) * 100;
+}
+
+function computePercentChangeData(filtered, key) {
+  const valid = filtered.filter((row) => Number.isFinite(row[key]));
+  if (valid.length === 0) {
+    return [];
+  }
+  const base = valid[0][key];
+  return valid.map((row) => ({
+    timestamp: row.date.getTime(),
+    isoDate: row.isoDate,
+    change: computeChange(base, row[key]),
+  }));
+}
+
+function computeDifferenceSeries(navChanges, wbtcChanges) {
+  const wbtcMap = new Map(wbtcChanges.map((item) => [item.isoDate, item.change]));
+  return navChanges
+    .map((item) => {
+      const wbtcChange = wbtcMap.get(item.isoDate);
+      if (!Number.isFinite(wbtcChange)) {
+        return null;
+      }
+      return [item.timestamp, item.change - wbtcChange];
+    })
+    .filter(Boolean);
+}
+
+function setDeltaClass(element, value) {
+  element.classList.remove('positive', 'negative');
+  if (!Number.isFinite(value)) {
     return;
   }
-  const latest = source[source.length - 1];
-  document.getElementById('roi-btc').textContent = formatPercent(latest.roi_in_btc);
-  document.getElementById('alpha-btc').textContent = formatPercent(latest.alpha_vs_btc);
-  document.getElementById('nav-btc').textContent = formatBtc(latest.nav_btc);
+  element.classList.add(value >= 0 ? 'positive' : 'negative');
 }
 
-function initCharts() {
-  state.charts.roi = echarts.init(document.getElementById('chart-roi-btc'));
-  state.charts.alpha = echarts.init(document.getElementById('chart-alpha'));
-  state.charts.nav = echarts.init(document.getElementById('chart-nav'));
-  window.addEventListener('resize', () => {
-    Object.values(state.charts).forEach((chart) => chart.resize());
-  });
+function updateCards(filtered) {
+  const t = getTranslations();
+  const navRows = filtered.filter((row) => Number.isFinite(row.nav_usd));
+  const wbtcRows = filtered.filter((row) => Number.isFinite(row.wbtc_usd));
+
+  const navFirst = navRows[0];
+  const navLast = navRows[navRows.length - 1];
+  const wbtcFirst = wbtcRows[0];
+  const wbtcLast = wbtcRows[wbtcRows.length - 1];
+
+  const navChange = computeChange(navFirst?.nav_usd, navLast?.nav_usd);
+  const wbtcChange = computeChange(wbtcFirst?.wbtc_usd, wbtcLast?.wbtc_usd);
+  const spreadChange = Number.isFinite(navChange) && Number.isFinite(wbtcChange) ? navChange - wbtcChange : Number.NaN;
+
+  const vlhxPriceEl = document.getElementById('card-vlhx-price');
+  const vlhxChangeEl = document.getElementById('card-vlhx-change');
+  const wbtcPriceEl = document.getElementById('card-wbtc-price');
+  const wbtcChangeEl = document.getElementById('card-wbtc-change');
+  const spreadEl = document.getElementById('card-spread');
+  const spreadNoteEl = document.getElementById('card-spread-note');
+
+  vlhxPriceEl.textContent = formatCurrency(navLast?.nav_usd);
+  vlhxChangeEl.textContent = `${t.cards.vlhx.change}: ${formatPercent(navChange)}`;
+  setDeltaClass(vlhxChangeEl, navChange);
+
+  wbtcPriceEl.textContent = formatCurrency(wbtcLast?.wbtc_usd);
+  wbtcChangeEl.textContent = `${t.cards.wbtc.change}: ${formatPercent(wbtcChange)}`;
+  setDeltaClass(wbtcChangeEl, wbtcChange);
+
+  spreadEl.textContent = formatPercent(spreadChange);
+  setDeltaClass(spreadEl, spreadChange);
+  spreadNoteEl.textContent = t.cards.spread.note;
 }
 
-function chartOptions(title, dataKey, data) {
-  const seriesData = data.map((row) => [row.date.getTime(), row[dataKey]]);
-  const isPercent = dataKey !== 'nav_btc';
+function createCommonChartOptions() {
   return {
-    tooltip: {
-      trigger: 'axis',
-      valueFormatter: (value) =>
-        isPercent ? `${value >= 0 ? '+' : ''}${Number(value).toFixed(2)}%` : `${Number(value).toFixed(8)} BTC`,
+    backgroundColor: COLORS.background,
+    grid: {
+      left: 48,
+      right: 24,
+      top: 32,
+      bottom: 48,
+    },
+    textStyle: {
+      color: COLORS.strongText,
+      fontFamily: 'Inter, sans-serif',
     },
     xAxis: {
       type: 'time',
-      axisLabel: {
-        color: '#94a3b8',
-      },
+      axisLine: { lineStyle: { color: COLORS.grid } },
+      axisLabel: { color: COLORS.subtleText },
+      splitLine: { show: false },
     },
     yAxis: {
       type: 'value',
-      axisLabel: {
-        color: '#94a3b8',
-        formatter: (value) => (isPercent ? `${value.toFixed(0)}%` : value.toFixed(4)),
-      },
-      splitLine: {
-        lineStyle: {
-          color: 'rgba(148, 163, 184, 0.2)',
-        },
-      },
+      axisLine: { show: false },
+      axisLabel: { color: COLORS.subtleText },
+      splitLine: { lineStyle: { color: COLORS.grid } },
     },
-    grid: {
-      left: 40,
-      right: 16,
-      top: 20,
-      bottom: 40,
-    },
-    series: [
-      {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
         type: 'line',
-        smooth: true,
-        showSymbol: false,
-        data: seriesData,
-        lineStyle: {
-          width: 2,
-        },
-        areaStyle: {
-          opacity: 0.08,
-        },
+        lineStyle: { color: COLORS.accent, width: 1 },
       },
-    ],
-    textStyle: {
-      color: '#e2e8f0',
     },
-    backgroundColor: 'transparent',
+    legend: {
+      top: 0,
+      textStyle: { color: COLORS.subtleText },
+    },
+    color: [COLORS.accent, COLORS.secondary, COLORS.danger],
   };
 }
 
-function updateCharts(rangeKey) {
-  const filtered = filterData(rangeKey);
-  Object.entries({
-    roi: 'roi_in_btc',
-    alpha: 'alpha_vs_btc',
-    nav: 'nav_btc',
-  }).forEach(([chartKey, dataKey]) => {
-    const chart = state.charts[chartKey];
-    if (!chart) return;
-    if (filtered.length === 0) {
-      chart.clear();
-      return;
+function updatePriceChart(filtered) {
+  const chart = state.charts.price;
+  if (!chart) return;
+  const t = getTranslations();
+  const locale = getLocale();
+  const wbtcSeries = [];
+  const vlhxSeries = [];
+
+  filtered.forEach((row) => {
+    const timestamp = row.date.getTime();
+    if (Number.isFinite(row.wbtc_usd)) {
+      wbtcSeries.push([timestamp, row.wbtc_usd]);
     }
-    chart.setOption(chartOptions(chartKey, dataKey, filtered));
+    if (Number.isFinite(row.nav_usd)) {
+      vlhxSeries.push([timestamp, row.nav_usd]);
+    }
   });
+
+  if (wbtcSeries.length === 0 && vlhxSeries.length === 0) {
+    chart.clear();
+    return;
+  }
+
+  const option = createCommonChartOptions();
+  option.legend.data = [];
+  option.yAxis.axisLabel.formatter = (value) =>
+    new Intl.NumberFormat(locale, { maximumFractionDigits: value < 2 ? 4 : 0 }).format(value);
+  option.tooltip.valueFormatter = (value) => formatCurrency(Number(value));
+  option.series = [];
+
+  if (wbtcSeries.length > 0) {
+    option.legend.data.push(t.charts.price.series.wbtc);
+    option.series.push({
+      name: t.charts.price.series.wbtc,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: wbtcSeries,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+    });
+  }
+
+  if (vlhxSeries.length > 0) {
+    option.legend.data.push(t.charts.price.series.vlhx);
+    option.series.push({
+      name: t.charts.price.series.vlhx,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: vlhxSeries,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+    });
+  }
+  chart.setOption(option, true);
+}
+
+function updateChangeChart(filtered) {
+  const chart = state.charts.change;
+  if (!chart) return;
+  const t = getTranslations();
+
+  const navChanges = computePercentChangeData(filtered, 'nav_usd');
+  const wbtcChanges = computePercentChangeData(filtered, 'wbtc_usd');
+
+  if (navChanges.length === 0 && wbtcChanges.length === 0) {
+    chart.clear();
+    return;
+  }
+
+  const option = createCommonChartOptions();
+  option.legend.data = [];
+  option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
+  option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
+  option.series = [];
+
+  if (wbtcChanges.length > 0) {
+    option.legend.data.push(t.charts.change.series.wbtc);
+    option.series.push({
+      name: t.charts.change.series.wbtc,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: wbtcChanges.map((item) => [item.timestamp, item.change]),
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+    });
+  }
+
+  if (navChanges.length > 0) {
+    option.legend.data.push(t.charts.change.series.vlhx);
+    option.series.push({
+      name: t.charts.change.series.vlhx,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: navChanges.map((item) => [item.timestamp, item.change]),
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+    });
+  }
+  chart.setOption(option, true);
+}
+
+function updateDiffChart(filtered) {
+  const chart = state.charts.diff;
+  if (!chart) return;
+  const t = getTranslations();
+
+  const navChanges = computePercentChangeData(filtered, 'nav_usd');
+  const wbtcChanges = computePercentChangeData(filtered, 'wbtc_usd');
+  const diffSeries = computeDifferenceSeries(navChanges, wbtcChanges);
+
+  if (diffSeries.length === 0) {
+    chart.clear();
+    return;
+  }
+
+  const option = createCommonChartOptions();
+  option.legend.data = [t.charts.diff.series.diff];
+  option.yAxis.axisLabel.formatter = (value) => `${value.toFixed(1)}%`;
+  option.tooltip.valueFormatter = (value) => formatPercent(Number(value));
+  option.color = [COLORS.accent];
+  option.series = [
+    {
+      name: t.charts.diff.series.diff,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: diffSeries,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.12 },
+    },
+  ];
+  chart.setOption(option, true);
+}
+
+function updateCharts(filtered) {
+  updatePriceChart(filtered);
+  updateChangeChart(filtered);
+  updateDiffChart(filtered);
+}
+
+function refreshUI() {
+  const filtered = filterData(state.range);
+  updateCards(filtered);
+  updateCharts(filtered);
 }
 
 async function loadData() {
   const dailyPath = getMetaContent('data-nav-daily');
+  const wbtcPath = getMetaContent('data-wbtc-daily');
   try {
-    const dailyText = await fetchCsv(dailyPath);
-    state.daily = toDailyData(parseCsv(dailyText));
-    updateCards();
-    updateCharts(state.range);
+    const [dailyText, wbtcText] = await Promise.all([fetchCsv(dailyPath), fetchCsv(wbtcPath)]);
+    const wbtcRows = parseCsv(wbtcText);
+    const wbtcMap = new Map(wbtcRows.map((row) => [row.day, parseNumber(row.wbtc_usd)]));
+    state.daily = toDailyData(parseCsv(dailyText), wbtcMap);
+    refreshUI();
   } catch (error) {
     console.error('Failed to load dashboard data', error);
   }
+}
+
+function updateFilterLabels() {
+  const t = getTranslations();
+  document.querySelectorAll('.filters button').forEach((button) => {
+    const range = button.dataset.range;
+    button.textContent = t.filters[range] || range;
+    button.classList.toggle('active', range === state.range);
+  });
+}
+
+function applyTranslations() {
+  const t = getTranslations();
+  document.getElementById('header-title').textContent = t.title;
+  document.getElementById('header-description').textContent = t.description;
+  document.getElementById('footer-text').textContent = t.footer;
+  document.getElementById('chart-price-title').textContent = t.charts.price.title;
+  document.getElementById('chart-change-title').textContent = t.charts.change.title;
+  document.getElementById('chart-diff-title').textContent = t.charts.diff.title;
+
+  document.querySelector('[data-i18n="card-vlhx-label"]').textContent = t.cards.vlhx.label;
+  document.querySelector('[data-i18n="card-wbtc-label"]').textContent = t.cards.wbtc.label;
+  document.querySelector('[data-i18n="card-spread-label"]').textContent = t.cards.spread.label;
+
+  updateFilterLabels();
+  document.documentElement.setAttribute('lang', state.language);
+}
+
+function updateLanguageButtons() {
+  document.querySelectorAll('.language-switcher button').forEach((button) => {
+    const lang = button.dataset.language;
+    button.classList.toggle('active', lang === state.language);
+    button.textContent = lang.toUpperCase();
+  });
+}
+
+function setLanguage(lang) {
+  if (!TRANSLATIONS[lang] || lang === state.language) {
+    return;
+  }
+  state.language = lang;
+  applyTranslations();
+  updateLanguageButtons();
+  refreshUI();
+}
+
+function initCharts() {
+  state.charts.price = echarts.init(document.getElementById('chart-price'));
+  state.charts.change = echarts.init(document.getElementById('chart-change'));
+  state.charts.diff = echarts.init(document.getElementById('chart-diff'));
+  window.addEventListener('resize', () => {
+    Object.values(state.charts).forEach((chart) => chart && chart.resize());
+  });
 }
 
 function initFilters() {
   document.querySelectorAll('.filters button').forEach((button) => {
     button.addEventListener('click', () => {
       const range = button.dataset.range;
+      if (range === state.range) {
+        return;
+      }
       state.range = range;
-      document.querySelectorAll('.filters button').forEach((btn) => btn.classList.remove('active'));
-      button.classList.add('active');
-      updateCharts(range);
+      updateFilterLabels();
+      refreshUI();
     });
   });
+  updateFilterLabels();
+}
+
+function initLanguageSwitcher() {
+  document.querySelectorAll('.language-switcher button').forEach((button) => {
+    button.addEventListener('click', () => {
+      const lang = button.dataset.language;
+      setLanguage(lang);
+    });
+  });
+  updateLanguageButtons();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyTranslations();
+  initLanguageSwitcher();
   initCharts();
   initFilters();
+  refreshUI();
   loadData();
   setInterval(loadData, 10 * 60 * 1000);
 });
