@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/build_nav_btc_daily.js",
-    "hourly": "npm run build && node dist/export_token_price_hourly.js && node dist/fetch_btc_hourly.js && node dist/build_nav_btc_hourly.js",
+    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js",
     "serve": "npx http-server public"
   },
   "dependencies": {

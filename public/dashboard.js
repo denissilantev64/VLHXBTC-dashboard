@@ -1,15 +1,14 @@
 const RANGE_CONFIG = {
-  '1D': { days: 1, dataset: 'hourly' },
-  '1W': { days: 7, dataset: 'hourly' },
-  '1M': { days: 30, dataset: 'daily' },
-  '3M': { days: 90, dataset: 'daily' },
-  YTD: { dataset: 'daily', ytd: true },
-  ALL: { dataset: 'daily', all: true },
+  '1D': { days: 1 },
+  '1W': { days: 7 },
+  '1M': { days: 30 },
+  '3M': { days: 90 },
+  YTD: { ytd: true },
+  ALL: { all: true },
 };
 
 const state = {
   daily: [],
-  hourly: [],
   range: '1D',
   charts: {},
 };
@@ -94,23 +93,10 @@ function toDailyData(rows) {
   }));
 }
 
-function toHourlyData(rows) {
-  return rows.map((row) => ({
-    date: new Date(row.ts),
-    nav_btc: Number(row.nav_btc),
-    roi_in_btc: Number(row.roi_in_btc) * 100,
-    roi_in_usd: Number(row.roi_in_usd) * 100,
-    alpha_vs_btc: Number(row.alpha_vs_btc) * 100,
-  }));
-}
-
 function filterData(rangeKey) {
   const config = RANGE_CONFIG[rangeKey] || RANGE_CONFIG['ALL'];
   const now = new Date();
-  let dataset = state.daily;
-  if (config.dataset === 'hourly') {
-    dataset = state.hourly.length > 0 ? state.hourly : state.daily;
-  }
+  const dataset = state.daily;
   if (config.all || dataset.length === 0) {
     return dataset;
   }
@@ -140,7 +126,7 @@ function formatBtc(value) {
 }
 
 function updateCards() {
-  const source = state.daily.length > 0 ? state.daily : state.hourly;
+  const source = state.daily;
   if (source.length === 0) {
     return;
   }
@@ -232,14 +218,9 @@ function updateCharts(rangeKey) {
 
 async function loadData() {
   const dailyPath = getMetaContent('data-nav-daily');
-  const hourlyPath = getMetaContent('data-nav-hourly');
   try {
-    const [dailyText, hourlyText] = await Promise.all([
-      fetchCsv(dailyPath),
-      fetchCsv(hourlyPath),
-    ]);
+    const dailyText = await fetchCsv(dailyPath);
     state.daily = toDailyData(parseCsv(dailyText));
-    state.hourly = toHourlyData(parseCsv(hourlyText));
     updateCards();
     updateCharts(state.range);
   } catch (error) {
