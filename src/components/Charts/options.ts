@@ -197,9 +197,101 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function createCommonChartOptions(locale: string, range: RangeKey): EChartsOption {
+const TIME_INTERVALS_MS = [
+  5 * 60 * 1000,
+  15 * 60 * 1000,
+  30 * 60 * 1000,
+  60 * 60 * 1000,
+  2 * 60 * 60 * 1000,
+  3 * 60 * 60 * 1000,
+  6 * 60 * 60 * 1000,
+  12 * 60 * 60 * 1000,
+  24 * 60 * 60 * 1000,
+  2 * 24 * 60 * 60 * 1000,
+  3 * 24 * 60 * 60 * 1000,
+  7 * 24 * 60 * 60 * 1000,
+  14 * 24 * 60 * 60 * 1000,
+  30 * 24 * 60 * 60 * 1000,
+  60 * 24 * 60 * 60 * 1000,
+  90 * 24 * 60 * 60 * 1000,
+  180 * 24 * 60 * 60 * 1000,
+  365 * 24 * 60 * 60 * 1000,
+  730 * 24 * 60 * 60 * 1000,
+  1095 * 24 * 60 * 60 * 1000,
+  1825 * 24 * 60 * 60 * 1000,
+];
+
+const TARGET_LABEL_COUNTS: Record<RangeKey, number> = {
+  '1D': 6,
+  '1M': 6,
+  '3M': 6,
+  '6M': 6,
+  '1Y': 6,
+  ALL: 6,
+};
+
+function computeTimeBounds(
+  seriesData: Array<Array<[number, number]>>,
+  padding: number,
+): { min: number; max: number } | null {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+
+  seriesData.forEach((series) => {
+    series.forEach(([timestamp]) => {
+      if (!Number.isFinite(timestamp)) {
+        return;
+      }
+      min = Math.min(min, timestamp);
+      max = Math.max(max, timestamp);
+    });
+  });
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+
+  if (min === max) {
+    const safePadding = Math.max(padding, 60 * 60 * 1000);
+    return { min: min - safePadding, max: max + safePadding };
+  }
+
+  return { min, max };
+}
+
+function pickTimeInterval(
+  minInterval: number,
+  desiredInterval: number,
+): number {
+  const candidates = TIME_INTERVALS_MS.filter((interval) => interval >= minInterval);
+  if (candidates.length === 0) {
+    return Math.max(minInterval, desiredInterval);
+  }
+  const selected = candidates.find((interval) => interval >= desiredInterval);
+  if (selected) {
+    return selected;
+  }
+  return candidates[candidates.length - 1];
+}
+
+function createCommonChartOptions(
+  locale: string,
+  range: RangeKey,
+  seriesData: Array<Array<[number, number]>>,
+): EChartsOption {
   const isDailyRange = range === '1D';
   const minInterval = isDailyRange ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const bounds = computeTimeBounds(seriesData, minInterval);
+  const targetLabels = TARGET_LABEL_COUNTS[range] ?? 6;
+  const desiredInterval = bounds
+    ? (bounds.max - bounds.min) / Math.max(targetLabels - 1, 1)
+    : minInterval;
+  const interval = pickTimeInterval(minInterval, Math.max(desiredInterval, minInterval));
+  const axisTick = {
+    show: true,
+    interval,
+    lineStyle: { color: colors.grid },
+  };
   return {
     backgroundColor: colors.background,
     grid: { left: 52, right: 52, top: 32, bottom: 64 },
@@ -207,14 +299,18 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
     xAxis: {
       type: 'time',
       minInterval,
+      min: bounds?.min,
+      max: bounds?.max,
       axisLine: { lineStyle: { color: colors.grid } },
       axisLabel: {
         color: colors.subtleText,
         hideOverlap: true,
         padding: [8, 0, 0, 0],
+        interval,
         formatter: (value: string | number) =>
           (isDailyRange ? formatAxisTime(value, locale) : formatAxisDate(value, locale)),
       },
+      axisTick,
       splitLine: { show: false },
       axisPointer: {
         show: true,
@@ -346,7 +442,7 @@ export function buildPriceOption(
   if (wbtc.length === 0 && vlhx.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale, range);
+  const option = createCommonChartOptions(locale, range, [wbtc, vlhx]);
   option.legend = { ...option.legend, data: [] };
   const wbtcBounds = computeBounds(wbtc);
   const vlhxBounds = computeBounds(vlhx);
@@ -420,7 +516,9 @@ export function buildChangeOption(
   if (navChanges.length === 0 && wbtcChanges.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale, range);
+  const navSeries = navChanges.map((point) => [point.timestamp, point.change] as [number, number]);
+  const wbtcSeries = wbtcChanges.map((point) => [point.timestamp, point.change] as [number, number]);
+  const option = createCommonChartOptions(locale, range, [navSeries, wbtcSeries]);
   option.legend = { ...option.legend, data: [] };
   option.tooltip = {
     ...option.tooltip,
@@ -434,22 +532,22 @@ export function buildChangeOption(
     axisPointer: { show: false },
   };
   const series: unknown[] = [];
-  if (wbtcChanges.length > 0) {
+  if (wbtcSeries.length > 0) {
     option.legend?.data?.push(translation.charts.change.series.wbtc);
     series.push(
       buildLineSeries({
         name: translation.charts.change.series.wbtc,
-        data: wbtcChanges.map((point) => [point.timestamp, point.change]),
+        data: wbtcSeries,
         color: colors.secondary,
       }),
     );
   }
-  if (navChanges.length > 0) {
+  if (navSeries.length > 0) {
     option.legend?.data?.push(translation.charts.change.series.vlhx);
     series.push(
       buildLineSeries({
         name: translation.charts.change.series.vlhx,
-        data: navChanges.map((point) => [point.timestamp, point.change]),
+        data: navSeries,
         color: colors.accent,
       }),
     );
@@ -469,7 +567,7 @@ export function buildDiffOption(
   if (diffSeries.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale, range);
+  const option = createCommonChartOptions(locale, range, [diffSeries]);
   option.legend = { ...option.legend, data: [translation.charts.diff.series.diff] };
   option.tooltip = {
     ...option.tooltip,
