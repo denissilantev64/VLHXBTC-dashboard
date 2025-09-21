@@ -96,6 +96,90 @@ function resolveTooltipAxisValue(param: ExtendedCallbackDataParams): string | nu
   return extractAxisCandidate(param.data);
 }
 
+
+interface TooltipParams {
+  axisValue?: unknown;
+  value?: OptionDataValue | OptionDataValue[];
+  data?: OptionDataValue | OptionDataValue[];
+  seriesName?: string;
+  marker?: string;
+}
+
+type TooltipFormatterParams = unknown;
+type TooltipFormatter = Exclude<TooltipOption['formatter'], string | undefined>;
+
+function toOptionDataValue(input: unknown): OptionDataValue | OptionDataValue[] | undefined {
+  if (input === null || input === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(input)) {
+    return input as OptionDataValue[];
+  }
+  if (input instanceof Date) {
+    return input;
+  }
+  if (typeof input === 'object') {
+    return undefined;
+  }
+  if (typeof input === 'number' || typeof input === 'string') {
+    return input as OptionDataValue;
+  }
+  return undefined;
+}
+
+function normalizeTooltipParams(input: TooltipFormatterParams): TooltipParams[] {
+  const entries = Array.isArray(input) ? input : [input];
+  return entries
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const record = item as Record<string, unknown>;
+      const markerValue = record.marker;
+      return {
+        axisValue: record.axisValue,
+        value: toOptionDataValue(record.value),
+        data: toOptionDataValue(record.data),
+        seriesName: typeof record.seriesName === 'string' ? record.seriesName : undefined,
+        marker: typeof markerValue === 'string' ? markerValue : '',
+      };
+    })
+    .filter(Boolean) as TooltipParams[];
+}
+
+function normalizeTooltipValue(input: OptionDataValue | OptionDataValue[] | undefined): number {
+  if (Array.isArray(input)) {
+    const candidate = input[1] ?? input[0];
+    if (candidate === undefined) {
+      return Number.NaN;
+    }
+    return extractNumericValue(candidate);
+  }
+  if (input === undefined) {
+    return Number.NaN;
+  }
+  return extractNumericValue(input);
+}
+
+function resolveTooltipAxisValue(param: TooltipParams): string | number | undefined {
+  if (typeof param.axisValue === 'number' || typeof param.axisValue === 'string') {
+    return param.axisValue;
+  }
+  if (Array.isArray(param.data)) {
+    const candidate = param.data[0];
+    if (typeof candidate === 'number' || typeof candidate === 'string') {
+      return candidate;
+    }
+  }
+  if (Array.isArray(param.value)) {
+    const candidate = param.value[0];
+    if (typeof candidate === 'number' || typeof candidate === 'string') {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
 function formatTooltipDate(value: string | number | undefined, locale: string): string {
   if (value === undefined) {
     return '';
@@ -116,6 +200,7 @@ function formatTooltipDate(value: string | number | undefined, locale: string): 
 function createTooltipFormatter(locale: string, formatValue: (value: number) => string): TooltipFormatter {
   return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
     const params = toParamsArray(input);
+
     if (!params.length) {
       return '';
     }
@@ -129,6 +214,7 @@ function createTooltipFormatter(locale: string, formatValue: (value: number) => 
         }
         const marker = typeof item.marker === 'string' ? item.marker : '';
         const label = typeof item.seriesName === 'string' ? item.seriesName : '';
+
         const formattedValue = formatValue(numeric);
         return `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
             <span style="display:flex;align-items:center;gap:8px;font-size:0.875rem;color:#ffffff;">${marker}${label}</span>
@@ -193,6 +279,7 @@ function createCommonChartOptions(locale: string): EChartsOption {
       borderWidth: 0,
       padding: 16,
       renderMode: 'html',
+
       extraCssText: 'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);',
       axisPointer: {
         type: 'line',
