@@ -3,7 +3,8 @@ export const translations = {
     title: 'Аналитика Valhalla BTC',
     description:
       'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Данные обновляются ежедневно.',
-    footer: 'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
+    footer:
+      'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
     cta: 'Начать инвестировать',
     filters: {
       '1D': '1Д',
