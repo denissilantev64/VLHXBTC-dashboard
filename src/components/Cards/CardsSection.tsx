@@ -24,25 +24,52 @@ function getDeltaClass(value: number | null | undefined): string {
 
 export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale }) => {
   return (
-    <section className="cards">
-      <article className="card" aria-live="polite">
-        <span className="label">{translation.cards.vlhx.label}</span>
-        <span className="value">{formatCurrency(stats.vlhx.price, locale)}</span>
-        <span className={`delta ${getDeltaClass(stats.vlhx.change)}`}>
+    <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <article
+        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        aria-live="polite"
+      >
+        <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
+          {translation.cards.vlhx.label}
+        </span>
+        <span className="value text-[clamp(1.75rem,3vw,2.5rem)] font-bold">
+          {formatCurrency(stats.vlhx.price, locale)}
+        </span>
+        <span
+          className={`delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400 ${getDeltaClass(stats.vlhx.change)}`}
+        >
           {translation.cards.vlhx.change}: {formatPercent(stats.vlhx.change)}
         </span>
       </article>
-      <article className="card" aria-live="polite">
-        <span className="label">{translation.cards.wbtc.label}</span>
-        <span className="value">{formatCurrency(stats.wbtc.price, locale)}</span>
-        <span className={`delta ${getDeltaClass(stats.wbtc.change)}`}>
+      <article
+        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        aria-live="polite"
+      >
+        <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
+          {translation.cards.wbtc.label}
+        </span>
+        <span className="value text-[clamp(1.75rem,3vw,2.5rem)] font-bold">
+          {formatCurrency(stats.wbtc.price, locale)}
+        </span>
+        <span
+          className={`delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400 ${getDeltaClass(stats.wbtc.change)}`}
+        >
           {translation.cards.wbtc.change}: {formatPercent(stats.wbtc.change)}
         </span>
       </article>
-      <article className="card" aria-live="polite">
-        <span className="label">{translation.cards.spread.label}</span>
-        <span className={`value ${getDeltaClass(stats.spread.delta)}`}>{formatPercent(stats.spread.delta)}</span>
-        <span className="delta">{translation.cards.spread.note}</span>
+      <article
+        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        aria-live="polite"
+      >
+        <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
+          {translation.cards.spread.label}
+        </span>
+        <span className={`value text-[clamp(1.75rem,3vw,2.5rem)] font-bold ${getDeltaClass(stats.spread.delta)}`}>
+          {formatPercent(stats.spread.delta)}
+        </span>
+        <span className="delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
+          {translation.cards.spread.note}
+        </span>
       </article>
     </section>
   );
