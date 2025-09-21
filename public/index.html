@@ -31,18 +31,80 @@
       header.top-bar {
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 32px;
       }
 
-      .top-row {
+      .header-nav {
         display: flex;
-        flex-wrap: wrap;
+        align-items: center;
         justify-content: space-between;
-        gap: 24px;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .logo-link {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .logo-link img {
+        display: block;
+        height: 16px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .invest-button {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 197px;
+        height: 40px;
+        padding: 8px 24px;
+        border-radius: 4px;
+        background: #ffffff;
+        color: #000000;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+        letter-spacing: 0.02em;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .invest-button:hover,
+      .invest-button:focus {
+        background: #f1f1f1;
+        color: #000000;
+      }
+
+      .language-toggle {
+        border: none;
+        background: transparent;
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        text-transform: uppercase;
+      }
+
+      .language-toggle::after {
+        content: '✓';
+        font-size: 0.75rem;
       }
 
       .brand {
-        flex: 1 1 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
       }
 
       h1 {
@@ -58,42 +120,6 @@
         color: #b3b3b3;
         font-size: 1rem;
         line-height: 1.6;
-      }
-
-      .toolbar {
-        display: flex;
-        gap: 16px;
-        align-items: flex-start;
-      }
-
-      .language-switcher {
-        display: inline-flex;
-        border: 1px solid #1f1f1f;
-        background: transparent;
-        border-radius: 0;
-      }
-
-      .language-switcher button {
-        position: relative;
-        padding: 8px 20px;
-        border: none;
-        background: #ffffff;
-        color: #000000;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease;
-        letter-spacing: 0.04em;
-        border-radius: 0;
-      }
-
-      .language-switcher button + button {
-        border-left: 1px solid #1f1f1f;
-      }
-
-      .language-switcher button.active {
-        background: #00a0d0;
-        color: #000000;
       }
 
       .filters {
@@ -205,15 +231,21 @@
         line-height: 1.6;
       }
 
-      a {
-
+      a:not(.invest-button) {
         color: #00a0d0;
-
       }
 
       @media (max-width: 768px) {
         .page {
           padding: 32px 16px 48px;
+        }
+
+        .header-nav {
+          gap: 12px;
+        }
+
+        .logo-link img {
+          height: 12px;
         }
 
         h1 {
@@ -228,7 +260,7 @@
 
         .chart-container {
           height: 260px;
-
+        }
       }
 
       @media (max-width: 1199px) {
@@ -242,6 +274,10 @@
       }
 
       @media (min-width: 1200px) {
+        .invest-button {
+          display: inline-flex;
+        }
+
         h1 {
           font-size: 4.25rem;
         }
@@ -258,20 +294,28 @@
   <body>
     <div class="page">
       <header class="top-bar">
-        <div class="top-row">
-          <div class="brand">
-            <h1 id="header-title">Valhalla BTC против WBTC</h1>
-            <p class="description" id="header-description">
-              Ежедневные данные фонда Valhalla BTC, сравнение с динамикой WBTC. Информация обновляется автоматически
-              каждые 10 минут.
-            </p>
+        <div class="header-nav">
+          <a class="logo-link" href="/">
+            <img src="logo.svg" alt="Valhalla" />
+          </a>
+          <div class="header-actions">
+            <a
+              class="invest-button"
+              href="https://dhedge.org/vault/0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Начать инвестировать
+            </a>
+            <button type="button" class="language-toggle" id="language-toggle" aria-label="Переключить язык">RU</button>
           </div>
-          <div class="toolbar">
-            <div class="language-switcher" role="group" aria-label="Выбор языка">
-              <button type="button" class="active" data-language="ru">RU</button>
-              <button type="button" data-language="en">EN</button>
-            </div>
-          </div>
+        </div>
+        <div class="brand">
+          <h1 id="header-title">Valhalla BTC против WBTC</h1>
+          <p class="description" id="header-description">
+            Ежедневные данные фонда Valhalla BTC, сравнение с динамикой WBTC. Информация обновляется автоматически каждые 10
+            минут.
+          </p>
         </div>
         <div class="filters" role="group" aria-label="Выбор периода">
           <button data-range="1D" class="active">1Д</button>
