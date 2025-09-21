@@ -1,7 +1,6 @@
 export const colors = {
   accent: '#00a0d0',
   secondary: '#ffffff',
-  warning: '#f7931a',
   background: '#000000',
   grid: '#1f1f1f',
   subtleText: '#b3b3b3',

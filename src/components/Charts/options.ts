@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts';
-import type { OptionDataValue } from 'echarts/types/src/util/types';
+import type { TooltipOption } from 'echarts/types/src/component/tooltip/TooltipModel';
+import type { CallbackDataParams } from 'echarts/types/src/util/types';
 import { colors, LEGEND_LINE_ICON } from '../../theme';
 import {
   computeDifferenceSeries,
@@ -17,20 +18,133 @@ interface LineSeriesConfig {
   yAxisIndex?: number;
 }
 
-function extractNumericValue(value: OptionDataValue | OptionDataValue[]): number {
-  const raw = Array.isArray(value) ? value[0] : value;
-  if (typeof raw === 'number') {
-    return raw;
+type TooltipFormatter = Exclude<TooltipOption['formatter'], string | undefined>;
+
+type ExtendedCallbackDataParams = CallbackDataParams & {
+  axisValue?: string | number;
+  axisValueLabel?: string;
+};
+
+function toParamsArray(
+  input: CallbackDataParams | CallbackDataParams[] | undefined,
+): ExtendedCallbackDataParams[] {
+  if (!input) {
+    return [];
   }
-  if (raw instanceof Date) {
-    return raw.getTime();
-  }
-  const numeric = Number(raw);
-  return Number.isFinite(numeric) ? numeric : Number.NaN;
+  const list = Array.isArray(input) ? input : [input];
+  return list.filter((item): item is ExtendedCallbackDataParams => !!item && typeof item === 'object');
 }
 
-function createValueFormatter(format: (value: number) => string) {
-  return (value: OptionDataValue | OptionDataValue[], _dataIndex: number) => format(extractNumericValue(value));
+function extractTooltipNumber(value: unknown): number | null {
+  if (Array.isArray(value)) {
+    if (value.length >= 2) {
+      const candidate = extractTooltipNumber(value[1]);
+      if (candidate !== null) {
+        return candidate;
+      }
+    }
+    if (value.length >= 1) {
+      return extractTooltipNumber(value[0]);
+    }
+    return null;
+  }
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isFinite(time) ? time : null;
+  }
+  if (value && typeof value === 'object' && 'value' in (value as Record<string, unknown>)) {
+    return extractTooltipNumber((value as Record<string, unknown>).value);
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function extractAxisCandidate(value: unknown): string | number | undefined {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return extractAxisCandidate(value[0]);
+  }
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isFinite(time) ? time : undefined;
+  }
+  if (value && typeof value === 'object' && 'value' in (value as Record<string, unknown>)) {
+    return extractAxisCandidate((value as Record<string, unknown>).value);
+  }
+  return undefined;
+}
+
+function resolveTooltipAxisValue(param: ExtendedCallbackDataParams): string | number | undefined {
+  if (typeof param.axisValue === 'number' || typeof param.axisValue === 'string') {
+    return param.axisValue;
+  }
+  if (typeof param.axisValueLabel === 'string') {
+    return param.axisValueLabel;
+  }
+  const fromValue = extractAxisCandidate(param.value);
+  if (fromValue !== undefined) {
+    return fromValue;
+  }
+  return extractAxisCandidate(param.data);
+}
+
+function formatTooltipDate(value: string | number | undefined, locale: string): string {
+  if (value === undefined) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
+    .format(date)
+    .replace(/\u00a0/g, ' ');
+}
+
+function createTooltipFormatter(locale: string, formatValue: (value: number) => string): TooltipFormatter {
+  return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
+    const params = toParamsArray(input);
+    if (!params.length) {
+      return '';
+    }
+    const axisValue = resolveTooltipAxisValue(params[0]);
+    const dateLabel = formatTooltipDate(axisValue, locale);
+    const rows = params
+      .map((item) => {
+        const numeric = extractTooltipNumber(item.value ?? item.data);
+        if (numeric === null) {
+          return '';
+        }
+        const marker = typeof item.marker === 'string' ? item.marker : '';
+        const label = typeof item.seriesName === 'string' ? item.seriesName : '';
+        const formattedValue = formatValue(numeric);
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <span style="display:flex;align-items:center;gap:8px;font-size:0.875rem;color:#ffffff;">${marker}${label}</span>
+            <span style="font-size:0.875rem;font-weight:600;color:${colors.accent};">${formattedValue}</span>
+          </div>`;
+      })
+      .filter(Boolean)
+      .join('');
+    if (!rows) {
+      return '';
+    }
+    const dateBlock = dateLabel
+      ? `<div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:#ffffff;opacity:0.72;">${dateLabel}</div>`
+      : '';
+    return `<div style="display:flex;flex-direction:column;gap:12px;">${dateBlock}${rows}</div>`;
+  };
 }
 
 function formatAxisDate(value: string | number, locale: string): string {
@@ -64,16 +178,27 @@ function createCommonChartOptions(locale: string): EChartsOption {
       axisLine: { lineStyle: { color: colors.grid } },
       axisLabel: { color: colors.subtleText, hideOverlap: true, padding: [8, 0, 0, 0], formatter: (value: string | number) => formatAxisDate(value, locale) },
       splitLine: { show: false },
+      axisPointer: { show: false },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisLabel: { color: colors.subtleText },
       splitLine: { lineStyle: { color: colors.grid } },
+      axisPointer: { show: false },
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'line', lineStyle: { color: colors.accent, width: 1 } },
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      borderWidth: 0,
+      padding: 16,
+      renderMode: 'html',
+      extraCssText: 'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);',
+      axisPointer: {
+        type: 'line',
+        lineStyle: { color: colors.accent, width: 1 },
+        label: { show: false },
+      },
     },
     legend: {
       top: 0,
@@ -83,7 +208,7 @@ function createCommonChartOptions(locale: string): EChartsOption {
       itemHeight: 6,
       data: [],
     },
-    color: [colors.accent, colors.secondary, colors.warning],
+    color: [colors.accent, colors.secondary, colors.subtleText],
   } satisfies EChartsOption;
 }
 
@@ -96,7 +221,13 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }: LineSeriesConfig
     data,
     yAxisIndex,
     color,
-    lineStyle: { width: 2, color },
+    lineStyle: {
+      width: 2,
+      color,
+      shadowColor: hexToRgba(color, 0.45),
+      shadowBlur: 8,
+      shadowOffsetY: 0,
+    },
     areaStyle: {
       color: {
         type: 'linear',
@@ -111,6 +242,30 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }: LineSeriesConfig
       },
     },
   };
+}
+
+function computeBounds(values: Array<[number, number]>): { min: number; max: number } | null {
+  if (!values.length) {
+    return null;
+  }
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  values.forEach(([, value]) => {
+    if (Number.isFinite(value)) {
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+  });
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+  if (min === max) {
+    const delta = Math.abs(min) * 0.05 || 1;
+    return { min: min - delta, max: max + delta };
+  }
+  const spread = max - min;
+  const padding = spread * 0.12;
+  return { min: min - padding, max: max + padding };
 }
 
 function buildPriceSeries(filtered: DailyEntry[]) {
@@ -141,6 +296,8 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
   }
   const option = createCommonChartOptions(locale);
   option.legend = { ...option.legend, data: [] };
+  const wbtcBounds = computeBounds(wbtc);
+  const vlhxBounds = computeBounds(vlhx);
   option.yAxis = [
     {
       type: 'value',
@@ -150,6 +307,10 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
         formatter: (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: value < 200 ? 2 : 0 }).format(value),
       },
       splitLine: { lineStyle: { color: colors.grid } },
+      min: wbtcBounds?.min,
+      max: wbtcBounds?.max,
+      scale: true,
+      axisPointer: { show: false },
     },
     {
       type: 'value',
@@ -160,11 +321,15 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
       },
       splitLine: { show: false },
       position: 'right',
+      min: vlhxBounds?.min,
+      max: vlhxBounds?.max,
+      scale: true,
+      axisPointer: { show: false },
     },
   ];
   option.tooltip = {
     ...option.tooltip,
-    valueFormatter: createValueFormatter((val) => formatCurrency(val, locale)),
+    formatter: createTooltipFormatter(locale, (val) => formatCurrency(val, locale)),
   };
   const series: unknown[] = [];
   if (wbtc.length > 0) {
@@ -202,13 +367,14 @@ export function buildChangeOption(filtered: DailyEntry[], translation: Translati
   option.legend = { ...option.legend, data: [] };
   option.tooltip = {
     ...option.tooltip,
-    valueFormatter: createValueFormatter((val) => formatPercent(val)),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val)),
   };
   option.yAxis = {
     type: 'value',
     axisLine: { show: false },
     axisLabel: { color: colors.subtleText, formatter: (value: number) => `${value.toFixed(1)}%` },
     splitLine: { lineStyle: { color: colors.grid } },
+    axisPointer: { show: false },
   };
   const series: unknown[] = [];
   if (wbtcChanges.length > 0) {
@@ -245,20 +411,21 @@ export function buildDiffOption(filtered: DailyEntry[], translation: Translation
   option.legend = { ...option.legend, data: [translation.charts.diff.series.diff] };
   option.tooltip = {
     ...option.tooltip,
-    valueFormatter: createValueFormatter((val) => formatPercent(val)),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val)),
   };
   option.yAxis = {
     type: 'value',
     axisLine: { show: false },
     axisLabel: { color: colors.subtleText, formatter: (value: number) => `${value.toFixed(1)}%` },
     splitLine: { lineStyle: { color: colors.grid } },
+    axisPointer: { show: false },
   };
-  option.color = [colors.warning];
+  option.color = [colors.accent];
   option.series = [
     buildLineSeries({
       name: translation.charts.diff.series.diff,
       data: diffSeries,
-      color: colors.warning,
+      color: colors.accent,
     }),
   ] as EChartsOption['series'];
   return option;
