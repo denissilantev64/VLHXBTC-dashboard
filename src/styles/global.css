@@ -108,7 +108,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: min(100%, 760px);
+  width: 100%;
 }
 
 h1 {
