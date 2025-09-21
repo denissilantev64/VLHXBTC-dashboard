@@ -108,14 +108,22 @@ function formatTooltipDate(value: string | number | undefined, locale: string, r
   }
   const options: Intl.DateTimeFormatOptions =
     range === '1D'
-      ? { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }
+      ? {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'UTC',
+        }
       : { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' };
   return new Intl.DateTimeFormat(locale, options).format(date).replace(/\u00a0/g, ' ');
 }
 
 function createTooltipFormatter(
   locale: string,
-  formatValue: (value: number) => string,
+  formatValue: (value: number | null) => string,
   range: RangeKey,
 ): TooltipFormatter {
   return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
@@ -130,9 +138,6 @@ function createTooltipFormatter(
     const items = params
       .map((item) => {
         const numeric = extractTooltipNumber(item.value ?? item.data);
-        if (numeric === null || !Number.isFinite(numeric)) {
-          return null;
-        }
         const marker = typeof item.marker === 'string' ? item.marker : '';
         const label = typeof item.seriesName === 'string' ? item.seriesName : '';
         return `
@@ -148,7 +153,7 @@ function createTooltipFormatter(
     }
 
     const dateBlock = dateLabel
-      ? `<div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:#ffffff;opacity:0.72;">${dateLabel}</div>`
+      ? `<div style="font-size:0.8125rem;font-weight:600;color:#ffffff;opacity:0.8;">${dateLabel}</div>`
       : '';
 
     return `<div style="display:flex;flex-direction:column;gap:12px;">${dateBlock}${items.join('')}</div>`;
@@ -169,7 +174,8 @@ function formatAxisTime(value: string | number, locale: string): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  const formatted = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(date);
+  const formatted =
+    new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(date);
   return formatted.replace(/\u00a0/g, ' ');
 }
 
@@ -223,13 +229,15 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(12, 18, 32, 0.92)',
+      show: true,
+      backgroundColor: 'rgba(12, 18, 32, 0.96)',
       borderColor: 'rgba(255, 255, 255, 0.08)',
       borderWidth: 1,
       padding: 16,
       renderMode: 'html',
-
-      extraCssText: 'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);',
+      appendToBody: true,
+      extraCssText:
+        'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); pointer-events: none;',
       axisPointer: {
         type: 'line',
         lineStyle: { color: colors.accent, width: 1 },
