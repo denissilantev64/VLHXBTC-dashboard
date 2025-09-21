@@ -200,6 +200,10 @@ h1 {
   display: none;
 }
 
+.chart-card__canvas {
+  min-width: 480px;
+}
+
 .delta.positive,
 .value.positive {
   color: #00a0d0;
