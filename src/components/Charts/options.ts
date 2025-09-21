@@ -8,6 +8,7 @@ import {
   formatCurrency,
   formatPercent,
   type DailyEntry,
+  type RangeKey,
 } from '../../services/data';
 import type { Translation } from '../../i18n';
 
@@ -97,7 +98,7 @@ function resolveTooltipAxisValue(param: ExtendedCallbackDataParams): string | nu
 }
 
 
-function formatTooltipDate(value: string | number | undefined, locale: string): string {
+function formatTooltipDate(value: string | number | undefined, locale: string, range: RangeKey): string {
   if (value === undefined) {
     return '';
   }
@@ -105,16 +106,18 @@ function formatTooltipDate(value: string | number | undefined, locale: string): 
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
-    .format(date)
-    .replace(/\u00a0/g, ' ');
+  const options: Intl.DateTimeFormatOptions =
+    range === '1D'
+      ? { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+      : { day: '2-digit', month: 'long', year: 'numeric' };
+  return new Intl.DateTimeFormat(locale, options).format(date).replace(/\u00a0/g, ' ');
 }
 
-function createTooltipFormatter(locale: string, formatValue: (value: number) => string): TooltipFormatter {
+function createTooltipFormatter(
+  locale: string,
+  formatValue: (value: number) => string,
+  range: RangeKey,
+): TooltipFormatter {
   return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
     const params = toParamsArray(input);
 
@@ -122,7 +125,7 @@ function createTooltipFormatter(locale: string, formatValue: (value: number) => 
       return '';
     }
     const axisValue = resolveTooltipAxisValue(params[0]);
-    const dateLabel = formatTooltipDate(axisValue, locale);
+    const dateLabel = formatTooltipDate(axisValue, locale, range);
     const rows = params
       .map((item) => {
         const numeric = extractTooltipNumber(item.value ?? item.data);
@@ -156,7 +159,16 @@ function formatAxisDate(value: string | number, locale: string): string {
     return '';
   }
   const formatted = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' }).format(date);
-  return formatted.replace(/\u00a0/g, ' ').replace('.', '').replace(' ', '\n');
+  return formatted.replace(/\u00a0/g, ' ').replace('.', '');
+}
+
+function formatAxisTime(value: string | number, locale: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const formatted = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+  return formatted.replace(/\u00a0/g, ' ');
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -171,15 +183,24 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function createCommonChartOptions(locale: string): EChartsOption {
+function createCommonChartOptions(locale: string, range: RangeKey): EChartsOption {
+  const isDailyRange = range === '1D';
+  const minInterval = isDailyRange ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   return {
     backgroundColor: colors.background,
     grid: { left: 52, right: 52, top: 48, bottom: 64 },
     textStyle: { color: colors.strongText, fontFamily: 'Inter, sans-serif' },
     xAxis: {
       type: 'time',
+      minInterval,
       axisLine: { lineStyle: { color: colors.grid } },
-      axisLabel: { color: colors.subtleText, hideOverlap: true, padding: [8, 0, 0, 0], formatter: (value: string | number) => formatAxisDate(value, locale) },
+      axisLabel: {
+        color: colors.subtleText,
+        hideOverlap: true,
+        padding: [8, 0, 0, 0],
+        formatter: (value: string | number) =>
+          (isDailyRange ? formatAxisTime(value, locale) : formatAxisDate(value, locale)),
+      },
       splitLine: { show: false },
       axisPointer: { show: false },
     },
@@ -192,8 +213,9 @@ function createCommonChartOptions(locale: string): EChartsOption {
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      borderWidth: 0,
+      backgroundColor: 'rgba(12, 18, 32, 0.92)',
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      borderWidth: 1,
       padding: 16,
       renderMode: 'html',
 
@@ -293,12 +315,17 @@ function buildChangeSeries(filtered: DailyEntry[]) {
   return { navChanges, wbtcChanges };
 }
 
-export function buildPriceOption(filtered: DailyEntry[], translation: Translation, locale: string): EChartsOption | null {
+export function buildPriceOption(
+  filtered: DailyEntry[],
+  translation: Translation,
+  locale: string,
+  range: RangeKey,
+): EChartsOption | null {
   const { wbtc, vlhx } = buildPriceSeries(filtered);
   if (wbtc.length === 0 && vlhx.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale);
+  const option = createCommonChartOptions(locale, range);
   option.legend = { ...option.legend, data: [] };
   const wbtcBounds = computeBounds(wbtc);
   const vlhxBounds = computeBounds(vlhx);
@@ -333,7 +360,7 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
   ];
   option.tooltip = {
     ...option.tooltip,
-    formatter: createTooltipFormatter(locale, (val) => formatCurrency(val, locale)),
+    formatter: createTooltipFormatter(locale, (val) => formatCurrency(val, locale), range),
   };
   const series: unknown[] = [];
   if (wbtc.length > 0) {
@@ -362,16 +389,21 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
   return option;
 }
 
-export function buildChangeOption(filtered: DailyEntry[], translation: Translation, locale: string): EChartsOption | null {
+export function buildChangeOption(
+  filtered: DailyEntry[],
+  translation: Translation,
+  locale: string,
+  range: RangeKey,
+): EChartsOption | null {
   const { navChanges, wbtcChanges } = buildChangeSeries(filtered);
   if (navChanges.length === 0 && wbtcChanges.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale);
+  const option = createCommonChartOptions(locale, range);
   option.legend = { ...option.legend, data: [] };
   option.tooltip = {
     ...option.tooltip,
-    formatter: createTooltipFormatter(locale, (val) => formatPercent(val)),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val), range),
   };
   option.yAxis = {
     type: 'value',
@@ -405,17 +437,22 @@ export function buildChangeOption(filtered: DailyEntry[], translation: Translati
   return option;
 }
 
-export function buildDiffOption(filtered: DailyEntry[], translation: Translation, locale: string): EChartsOption | null {
+export function buildDiffOption(
+  filtered: DailyEntry[],
+  translation: Translation,
+  locale: string,
+  range: RangeKey,
+): EChartsOption | null {
   const { navChanges, wbtcChanges } = buildChangeSeries(filtered);
   const diffSeries = computeDifferenceSeries(navChanges, wbtcChanges);
   if (diffSeries.length === 0) {
     return null;
   }
-  const option = createCommonChartOptions(locale);
+  const option = createCommonChartOptions(locale, range);
   option.legend = { ...option.legend, data: [translation.charts.diff.series.diff] };
   option.tooltip = {
     ...option.tooltip,
-    formatter: createTooltipFormatter(locale, (val) => formatPercent(val)),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val), range),
   };
   option.yAxis = {
     type: 'value',

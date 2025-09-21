@@ -86,7 +86,7 @@ export function App(): JSX.Element {
       />
       <main className="content">
         <CardsSection stats={stats} translation={translation} locale={locale} />
-        <ChartsSection data={filteredData} translation={translation} locale={locale} />
+        <ChartsSection data={filteredData} translation={translation} locale={locale} range={range} />
       </main>
       <footer>{translation.footer}</footer>
     </div>

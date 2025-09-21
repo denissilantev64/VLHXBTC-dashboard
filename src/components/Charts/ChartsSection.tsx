@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { FC } from 'react';
-import type { DailyEntry } from '../../services/data';
+import type { DailyEntry, RangeKey } from '../../services/data';
 import type { Translation } from '../../i18n';
 import { ChartCard } from './ChartCard';
 import { buildChangeOption, buildDiffOption, buildPriceOption } from './options';
@@ -9,12 +9,22 @@ interface ChartsSectionProps {
   data: DailyEntry[];
   translation: Translation;
   locale: string;
+  range: RangeKey;
 }
 
-export const ChartsSection: FC<ChartsSectionProps> = ({ data, translation, locale }) => {
-  const priceOption = useMemo(() => buildPriceOption(data, translation, locale), [data, translation, locale]);
-  const changeOption = useMemo(() => buildChangeOption(data, translation, locale), [data, translation, locale]);
-  const diffOption = useMemo(() => buildDiffOption(data, translation, locale), [data, translation, locale]);
+export const ChartsSection: FC<ChartsSectionProps> = ({ data, translation, locale, range }) => {
+  const priceOption = useMemo(
+    () => buildPriceOption(data, translation, locale, range),
+    [data, translation, locale, range],
+  );
+  const changeOption = useMemo(
+    () => buildChangeOption(data, translation, locale, range),
+    [data, translation, locale, range],
+  );
+  const diffOption = useMemo(
+    () => buildDiffOption(data, translation, locale, range),
+    [data, translation, locale, range],
+  );
 
   return (
     <section className="chart-grid">
