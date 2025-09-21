@@ -118,12 +118,14 @@ function formatTooltipDate(value: string | number | undefined, locale: string, r
           timeZone: 'UTC',
         }
       : { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' };
+
   return new Intl.DateTimeFormat(locale, options).format(date).replace(/\u00a0/g, ' ');
 }
 
 function createTooltipFormatter(
   locale: string,
   formatValue: (value: number | null) => string,
+
   range: RangeKey,
 ): TooltipFormatter {
   return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
@@ -136,6 +138,7 @@ function createTooltipFormatter(
     const dateLabel = formatTooltipDate(axisValue, locale, range);
 
     const items = params
+
       .map((item) => {
         const numeric = extractTooltipNumber(item.value ?? item.data);
         const marker = typeof item.marker === 'string' ? item.marker : '';
@@ -166,6 +169,7 @@ function formatAxisDate(value: string | number, locale: string): string {
     return '';
   }
   const formatted = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', timeZone: 'UTC' }).format(date);
+
   return formatted.replace(/\u00a0/g, ' ').replace('.', '');
 }
 
@@ -174,8 +178,10 @@ function formatAxisTime(value: string | number, locale: string): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
+
   const formatted =
     new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(date);
+
   return formatted.replace(/\u00a0/g, ' ');
 }
 
@@ -231,6 +237,7 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
       trigger: 'axis',
       show: true,
       backgroundColor: 'rgba(12, 18, 32, 0.96)',
+
       borderColor: 'rgba(255, 255, 255, 0.08)',
       borderWidth: 1,
       padding: 16,

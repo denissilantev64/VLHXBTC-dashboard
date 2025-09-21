@@ -9,6 +9,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const observedElementsRef = useRef<HTMLElement[]>([]);
 
+
   useEffect(() => {
     const element = containerRef.current;
     if (!element) {
@@ -85,6 +86,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     } else {
       chart.resize();
     }
+
   }, [option]);
 
   return containerRef;
