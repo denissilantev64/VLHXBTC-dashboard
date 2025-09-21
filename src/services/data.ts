@@ -23,7 +23,7 @@ const DATA_SOURCES = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const DATA_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+export const DATA_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export interface DailyEntry {
   date: Date;
@@ -158,9 +158,12 @@ export function filterByRange(range: RangeKey, dataset: DailyEntry[]): DailyEntr
   }
   if (config.days) {
     const lastDate = dataset[dataset.length - 1].date;
-    const offsetDays = Math.max(config.days - 1, 0);
-    const start = new Date(lastDate.getTime() - offsetDays * DAY_MS);
-    return dataset.filter((entry) => entry.date >= start);
+    const startTime = lastDate.getTime() - config.days * DAY_MS;
+    const filtered = dataset.filter((entry) => entry.date.getTime() >= startTime);
+    if (filtered.length >= 2 || dataset.length < 2) {
+      return filtered;
+    }
+    return dataset.slice(-2);
   }
   return dataset;
 }
@@ -237,8 +240,8 @@ export function getAvailableRanges(dataset: DailyEntry[]): RangeKey[] {
       return false;
     }
     const lastDate = dataset[dataset.length - 1].date;
-    const start = new Date(lastDate.getTime() - Math.max(config.days - 1, 0) * DAY_MS);
-    return dataset.some((entry) => entry.date <= start);
+    const startTime = lastDate.getTime() - config.days * DAY_MS;
+    return dataset.some((entry) => entry.date.getTime() <= startTime);
   });
 }
 

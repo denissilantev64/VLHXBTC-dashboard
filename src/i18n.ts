@@ -2,8 +2,8 @@ export const translations = {
   ru: {
     title: 'Аналитика Valhalla BTC',
     description:
-      'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Информация обновляется автоматически каждые 10 минут.',
-    footer: 'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
+      'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin.',
+    footer: '',
     cta: 'Начать инвестировать',
     filters: {
       '1D': '1Д',
@@ -46,8 +46,8 @@ export const translations = {
   en: {
     title: 'Valhalla BTC Analytics',
     description:
-      'Performance of the Valhalla BTC fund versus holding Bitcoin directly. Data refreshes automatically every 10 minutes.',
-    footer: 'Data is sourced from public feeds (CoinGecko, Arbitrum) and updates daily. Visualised with ECharts.',
+      'Performance of the Valhalla BTC fund versus holding Bitcoin directly.',
+    footer: '',
     cta: 'Start investing',
     filters: {
       '1D': '1D',

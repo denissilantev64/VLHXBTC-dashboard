@@ -195,19 +195,21 @@ function createCommonChartOptions(locale: string): EChartsOption {
       axisLine: { lineStyle: { color: colors.grid } },
       axisLabel: { color: colors.subtleText, hideOverlap: true, padding: [8, 0, 0, 0], formatter: (value: string | number) => formatAxisDate(value, locale) },
       splitLine: { show: false },
+      axisPointer: { show: false },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisLabel: { color: colors.subtleText },
       splitLine: { lineStyle: { color: colors.grid } },
+      axisPointer: { show: false },
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(0, 0, 0, 0.72)',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
       borderWidth: 0,
       padding: 16,
-      extraCssText: 'backdrop-filter: blur(12px); border-radius: 12px;',
+      extraCssText: 'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);',
       axisPointer: {
         type: 'line',
         lineStyle: { color: colors.accent, width: 1 },
@@ -235,7 +237,13 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }: LineSeriesConfig
     data,
     yAxisIndex,
     color,
-    lineStyle: { width: 2, color },
+    lineStyle: {
+      width: 2,
+      color,
+      shadowColor: hexToRgba(color, 0.45),
+      shadowBlur: 8,
+      shadowOffsetY: 0,
+    },
     areaStyle: {
       color: {
         type: 'linear',
@@ -250,6 +258,30 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }: LineSeriesConfig
       },
     },
   };
+}
+
+function computeBounds(values: Array<[number, number]>): { min: number; max: number } | null {
+  if (!values.length) {
+    return null;
+  }
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  values.forEach(([, value]) => {
+    if (Number.isFinite(value)) {
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+  });
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return null;
+  }
+  if (min === max) {
+    const delta = Math.abs(min) * 0.05 || 1;
+    return { min: min - delta, max: max + delta };
+  }
+  const spread = max - min;
+  const padding = spread * 0.12;
+  return { min: min - padding, max: max + padding };
 }
 
 function buildPriceSeries(filtered: DailyEntry[]) {
@@ -280,6 +312,8 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
   }
   const option = createCommonChartOptions(locale);
   option.legend = { ...option.legend, data: [] };
+  const wbtcBounds = computeBounds(wbtc);
+  const vlhxBounds = computeBounds(vlhx);
   option.yAxis = [
     {
       type: 'value',
@@ -289,6 +323,10 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
         formatter: (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: value < 200 ? 2 : 0 }).format(value),
       },
       splitLine: { lineStyle: { color: colors.grid } },
+      min: wbtcBounds?.min,
+      max: wbtcBounds?.max,
+      scale: true,
+      axisPointer: { show: false },
     },
     {
       type: 'value',
@@ -299,6 +337,10 @@ export function buildPriceOption(filtered: DailyEntry[], translation: Translatio
       },
       splitLine: { show: false },
       position: 'right',
+      min: vlhxBounds?.min,
+      max: vlhxBounds?.max,
+      scale: true,
+      axisPointer: { show: false },
     },
   ];
   option.tooltip = {
@@ -348,6 +390,7 @@ export function buildChangeOption(filtered: DailyEntry[], translation: Translati
     axisLine: { show: false },
     axisLabel: { color: colors.subtleText, formatter: (value: number) => `${value.toFixed(1)}%` },
     splitLine: { lineStyle: { color: colors.grid } },
+    axisPointer: { show: false },
   };
   const series: unknown[] = [];
   if (wbtcChanges.length > 0) {
@@ -391,6 +434,7 @@ export function buildDiffOption(filtered: DailyEntry[], translation: Translation
     axisLine: { show: false },
     axisLabel: { color: colors.subtleText, formatter: (value: number) => `${value.toFixed(1)}%` },
     splitLine: { lineStyle: { color: colors.grid } },
+    axisPointer: { show: false },
   };
   option.color = [colors.accent];
   option.series = [
