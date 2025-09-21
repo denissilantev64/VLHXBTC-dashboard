@@ -696,12 +696,17 @@ function applyTranslations() {
   document.documentElement.setAttribute('lang', state.language);
 }
 
-function updateLanguageButtons() {
-  document.querySelectorAll('.language-switcher button').forEach((button) => {
-    const lang = button.dataset.language;
-    button.classList.toggle('active', lang === state.language);
-    button.textContent = lang.toUpperCase();
-  });
+function updateLanguageToggle() {
+  const toggle = document.getElementById('language-toggle');
+  if (!toggle) {
+    return;
+  }
+  const label = state.language.toUpperCase();
+  toggle.textContent = label;
+  toggle.setAttribute(
+    'aria-label',
+    state.language === 'ru' ? 'Переключить на английский язык' : 'Switch to Russian language',
+  );
 }
 
 function setLanguage(lang) {
@@ -710,7 +715,7 @@ function setLanguage(lang) {
   }
   state.language = lang;
   applyTranslations();
-  updateLanguageButtons();
+  updateLanguageToggle();
   refreshUI();
 }
 
@@ -741,19 +746,21 @@ function initFilters() {
 
 }
 
-function initLanguageSwitcher() {
-  document.querySelectorAll('.language-switcher button').forEach((button) => {
-    button.addEventListener('click', () => {
-      const lang = button.dataset.language;
-      setLanguage(lang);
-    });
+function initLanguageToggle() {
+  const toggle = document.getElementById('language-toggle');
+  if (!toggle) {
+    return;
+  }
+  toggle.addEventListener('click', () => {
+    const nextLang = state.language === 'ru' ? 'en' : 'ru';
+    setLanguage(nextLang);
   });
-  updateLanguageButtons();
+  updateLanguageToggle();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTranslations();
-  initLanguageSwitcher();
+  initLanguageToggle();
   initCharts();
   initFilters();
   refreshUI();
