@@ -197,30 +197,6 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const TIME_INTERVALS_MS = [
-  5 * 60 * 1000,
-  15 * 60 * 1000,
-  30 * 60 * 1000,
-  60 * 60 * 1000,
-  2 * 60 * 60 * 1000,
-  3 * 60 * 60 * 1000,
-  6 * 60 * 60 * 1000,
-  12 * 60 * 60 * 1000,
-  24 * 60 * 60 * 1000,
-  2 * 24 * 60 * 60 * 1000,
-  3 * 24 * 60 * 60 * 1000,
-  7 * 24 * 60 * 60 * 1000,
-  14 * 24 * 60 * 60 * 1000,
-  30 * 24 * 60 * 60 * 1000,
-  60 * 24 * 60 * 60 * 1000,
-  90 * 24 * 60 * 60 * 1000,
-  180 * 24 * 60 * 60 * 1000,
-  365 * 24 * 60 * 60 * 1000,
-  730 * 24 * 60 * 60 * 1000,
-  1095 * 24 * 60 * 60 * 1000,
-  1825 * 24 * 60 * 60 * 1000,
-];
-
 const TARGET_LABEL_COUNTS: Record<RangeKey, number> = {
   '1D': 6,
   '1M': 6,
@@ -259,21 +235,6 @@ function computeTimeBounds(
   return { min, max };
 }
 
-function pickTimeInterval(
-  minInterval: number,
-  desiredInterval: number,
-): number {
-  const candidates = TIME_INTERVALS_MS.filter((interval) => interval >= minInterval);
-  if (candidates.length === 0) {
-    return Math.max(minInterval, desiredInterval);
-  }
-  const selected = candidates.find((interval) => interval >= desiredInterval);
-  if (selected) {
-    return selected;
-  }
-  return candidates[candidates.length - 1];
-}
-
 function createCommonChartOptions(
   locale: string,
   range: RangeKey,
@@ -283,13 +244,10 @@ function createCommonChartOptions(
   const minInterval = isDailyRange ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const bounds = computeTimeBounds(seriesData, minInterval);
   const targetLabels = TARGET_LABEL_COUNTS[range] ?? 6;
-  const desiredInterval = bounds
-    ? (bounds.max - bounds.min) / Math.max(targetLabels - 1, 1)
-    : minInterval;
-  const interval = pickTimeInterval(minInterval, Math.max(desiredInterval, minInterval));
+  const splitNumber = targetLabels;
   const axisTick = {
     show: true,
-    interval,
+    interval: 'auto' as const,
     lineStyle: { color: colors.grid },
   };
   return {
@@ -301,12 +259,13 @@ function createCommonChartOptions(
       minInterval,
       min: bounds?.min,
       max: bounds?.max,
+      splitNumber,
       axisLine: { lineStyle: { color: colors.grid } },
       axisLabel: {
         color: colors.subtleText,
         hideOverlap: true,
         padding: [8, 0, 0, 0],
-        interval,
+        interval: 'auto',
         formatter: (value: string | number) =>
           (isDailyRange ? formatAxisTime(value, locale) : formatAxisDate(value, locale)),
       },
