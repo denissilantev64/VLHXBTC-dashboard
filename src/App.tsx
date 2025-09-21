@@ -84,8 +84,10 @@ export function App(): JSX.Element {
         availableRanges={availableRanges}
         onRangeChange={handleRangeChange}
       />
-      <CardsSection stats={stats} translation={translation} locale={locale} />
-      <ChartsSection data={filteredData} translation={translation} locale={locale} />
+      <main className="content">
+        <CardsSection stats={stats} translation={translation} locale={locale} />
+        <ChartsSection data={filteredData} translation={translation} locale={locale} />
+      </main>
       <footer>{translation.footer}</footer>
     </div>
   );
