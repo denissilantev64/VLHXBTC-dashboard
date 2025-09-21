@@ -72,7 +72,6 @@ One workflow lives under `.github/workflows/`:
 
 The production dashboard is served from GitHub Pages at `https://denissilantev64.github.io/VLHXBTC-dashboard/`.
 
-
 ## Dashboard
 
 The static dashboard is served from `public/` and deployed to GitHub Pages.
@@ -118,6 +117,7 @@ Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**
 ├── src/                    # TypeScript source for exporters, builders, and React dashboard
 ├── dist/                   # Compiled JS for both collectors and dashboard (`npm run build`)
 └── .github/workflows/      # GitHub Actions for automated deployment
+
 ```
 
 ## License
