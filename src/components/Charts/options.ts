@@ -1,7 +1,7 @@
 import type { EChartsOption } from 'echarts';
 import type { TooltipOption } from 'echarts/types/src/component/tooltip/TooltipModel';
 import type { CallbackDataParams } from 'echarts/types/src/util/types';
-import { colors, LEGEND_LINE_ICON } from '../../theme';
+import { colors } from '../../theme';
 import {
   computeDifferenceSeries,
   computePercentChangeData,
@@ -108,48 +108,58 @@ function formatTooltipDate(value: string | number | undefined, locale: string, r
   }
   const options: Intl.DateTimeFormatOptions =
     range === '1D'
-      ? { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
-      : { day: '2-digit', month: 'long', year: 'numeric' };
+      ? {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'UTC',
+        }
+      : { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' };
+
   return new Intl.DateTimeFormat(locale, options).format(date).replace(/\u00a0/g, ' ');
 }
 
 function createTooltipFormatter(
   locale: string,
-  formatValue: (value: number) => string,
+  formatValue: (value: number | null) => string,
+
   range: RangeKey,
 ): TooltipFormatter {
   return (input: CallbackDataParams | CallbackDataParams[], _asyncTicket: string) => {
     const params = toParamsArray(input);
-
-    if (!params.length) {
+    if (params.length === 0) {
       return '';
     }
+
     const axisValue = resolveTooltipAxisValue(params[0]);
     const dateLabel = formatTooltipDate(axisValue, locale, range);
-    const rows = params
+
+    const items = params
+
       .map((item) => {
         const numeric = extractTooltipNumber(item.value ?? item.data);
-        if (numeric === null) {
-          return '';
-        }
         const marker = typeof item.marker === 'string' ? item.marker : '';
         const label = typeof item.seriesName === 'string' ? item.seriesName : '';
-
-        const formattedValue = formatValue(numeric);
-        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
             <span style="display:flex;align-items:center;gap:8px;font-size:0.875rem;color:#ffffff;">${marker}${label}</span>
-            <span style="font-size:0.875rem;font-weight:600;color:${colors.accent};">${formattedValue}</span>
+            <span style="font-size:0.875rem;font-weight:600;color:${colors.accent};">${formatValue(numeric)}</span>
           </div>`;
       })
-      .filter(Boolean)
-      .join('');
-    if (!rows) {
+      .filter((chunk): chunk is string => Boolean(chunk));
+
+    if (items.length === 0) {
       return '';
     }
+
     const dateBlock = dateLabel
-      ? `<div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:#ffffff;opacity:0.72;">${dateLabel}</div>`
+      ? `<div style="font-size:0.8125rem;font-weight:600;color:#ffffff;opacity:0.8;">${dateLabel}</div>`
       : '';
-    return `<div style="display:flex;flex-direction:column;gap:12px;">${dateBlock}${rows}</div>`;
+
+    return `<div style="display:flex;flex-direction:column;gap:12px;">${dateBlock}${items.join('')}</div>`;
   };
 }
 
@@ -158,7 +168,8 @@ function formatAxisDate(value: string | number, locale: string): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  const formatted = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' }).format(date);
+  const formatted = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', timeZone: 'UTC' }).format(date);
+
   return formatted.replace(/\u00a0/g, ' ').replace('.', '');
 }
 
@@ -167,7 +178,10 @@ function formatAxisTime(value: string | number, locale: string): string {
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  const formatted = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+
+  const formatted =
+    new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(date);
+
   return formatted.replace(/\u00a0/g, ' ');
 }
 
@@ -188,7 +202,7 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
   const minInterval = isDailyRange ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   return {
     backgroundColor: colors.background,
-    grid: { left: 52, right: 52, top: 48, bottom: 64 },
+    grid: { left: 52, right: 52, top: 32, bottom: 64 },
     textStyle: { color: colors.strongText, fontFamily: 'Inter, sans-serif' },
     xAxis: {
       type: 'time',
@@ -202,24 +216,35 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
           (isDailyRange ? formatAxisTime(value, locale) : formatAxisDate(value, locale)),
       },
       splitLine: { show: false },
-      axisPointer: { show: false },
+      axisPointer: {
+        show: true,
+        label: { show: false },
+        handle: { show: false },
+      },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisLabel: { color: colors.subtleText },
       splitLine: { lineStyle: { color: colors.grid } },
-      axisPointer: { show: false },
+      axisPointer: {
+        show: true,
+        label: { show: false },
+        handle: { show: false },
+      },
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(12, 18, 32, 0.92)',
+      show: true,
+      backgroundColor: 'rgba(12, 18, 32, 0.96)',
+
       borderColor: 'rgba(255, 255, 255, 0.08)',
       borderWidth: 1,
       padding: 16,
       renderMode: 'html',
-
-      extraCssText: 'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);',
+      appendToBody: true,
+      extraCssText:
+        'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); pointer-events: none;',
       axisPointer: {
         type: 'line',
         lineStyle: { color: colors.accent, width: 1 },
@@ -227,11 +252,7 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
       },
     },
     legend: {
-      top: 0,
-      textStyle: { color: colors.subtleText, fontSize: 12 },
-      icon: LEGEND_LINE_ICON,
-      itemWidth: 24,
-      itemHeight: 6,
+      show: false,
       data: [],
     },
     color: [colors.accent, colors.secondary, colors.subtleText],
