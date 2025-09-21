@@ -36,7 +36,7 @@ export const translations = {
         },
       },
       diff: {
-        title: 'Разница изменения (%)',
+        title: 'Доходность фонда в BTC (%)',
         series: {
           diff: 'Разница изменений',
         },
@@ -80,7 +80,7 @@ export const translations = {
         },
       },
       diff: {
-        title: 'Change Difference (%)',
+        title: 'Fund Performance in BTC (%)',
         series: {
           diff: 'Change spread',
         },
