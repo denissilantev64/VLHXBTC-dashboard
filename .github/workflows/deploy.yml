@@ -25,7 +25,7 @@ jobs:
           node-version: 20
           cache: 'npm'
       - run: npm ci
-      - name: Update datasets
+      - name: Refresh datasets
         run: npm run daily
       - name: Build static dashboard
         run: npm run build

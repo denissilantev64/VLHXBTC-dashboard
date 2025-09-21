@@ -7,8 +7,8 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
-- Automated GitHub Actions workflow that backfills data, updates CSVs, and publishes the dashboard to GitHub Pages without manual steps.
-- Lightweight static dashboard (ECharts) with preset time range filters (1D/1W/1M/3M/YTD/ALL) that reads CSVs directly from the repository.
+- Automated GitHub Actions workflow that refreshes datasets, builds the dashboard, and deploys GitHub Pages without manual commits.
+- Lightweight React + Vite dashboard (ECharts) with preset time range filters (1D/1M/3M/6M/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
 ## Getting Started
@@ -29,21 +29,19 @@ npm install
 Run the daily jobs locally. The first run backfills 365 days of NAV data.
 
 ```bash
-# Build TypeScript -> dist-node/
-npm run build
-
-# Run daily collectors (NAV, BTC, WBTC, derived metrics)
+# Compile collectors and refresh CSV exports (first run backfills 365 days)
 npm run daily
+
+# Build the dashboard bundle with the freshly generated CSVs
+npm run build
 ```
 
-CSV outputs are written into the gitignored `data/` directory:
+CSV outputs are written into the gitignored `public/data/` directory:
 
-- `data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
-- `data/btc_usd_daily.csv` — `day,btc_usd`
-- `data/wbtc_usd_daily.csv` — `day,wbtc_usd`
-- `data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
-
-> **Note:** Because `data/` is generated on the fly it is excluded from version control. Run `npm run daily` before `npm run build` or `npm run serve` to populate CSVs locally.
+- `public/data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
+- `public/data/btc_usd_daily.csv` — `day,btc_usd`
+- `public/data/wbtc_usd_daily.csv` — `day,wbtc_usd`
+- `public/data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
 
 All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
@@ -54,48 +52,51 @@ By default the exporter uses the public Arbitrum RPC. Override or add fallbacks 
 ```bash
 export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
 export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
-export GITHUB_PAGES_BASE="/VLHXBTC-dashboard/" # optional for local GitHub Pages parity
+export GITHUB_PAGES_BASE="/VLHXBTC-dashboard/" # optional for local parity with GitHub Pages
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints. The deploy workflow injects `GITHUB_PAGES_BASE` automatically so the built site uses the correct asset paths on GitHub Pages.
+Create a `.env` or add these variables in GitHub Secrets to use premium endpoints. The deploy workflow automatically injects `GITHUB_PAGES_BASE` so static assets resolve correctly on Pages.
 
 ## GitHub Actions
 
-The deploy pipeline lives under `.github/workflows/`:
+One workflow lives under `.github/workflows/`:
 
-- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes `npm run daily` to refresh CSV exports, builds the static dashboard with the GitHub Pages base path, and publishes the `dist/` artifact via `actions/deploy-pages`.
+- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes the collectors via `npm run daily`, builds the static dashboard with the GitHub Pages base path, and uploads the `dist/` artifact for deployment.
 
 
 ### Publishing to GitHub Pages
 
 1. Open **Settings → Pages** inside this repository and set **Source = GitHub Actions**. This only needs to be done once.
-2. Push to `main` or wait for the nightly schedule. The workflow uploads the `dist/` bundle and CSVs as a Pages artifact automatically.
+2. Push to `main` or wait for the nightly cron run. The workflow refreshes CSVs, builds the dashboard, and deploys automatically — no manual commits or uploads are required.
 3. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
-Once the deployment job finishes, the dashboard is available at `https://<owner>.github.io/VLHXBTC-dashboard/`. The workflow bundles freshly generated CSVs into the published artifact so the dashboard always reads the latest `/data/*.csv` files from Pages.
+The production dashboard is served from GitHub Pages at `https://denissilantev64.github.io/VLHXBTC-dashboard/`.
 
 
 ## Dashboard
 
 The static dashboard is served from `public/` and deployed to GitHub Pages.
 
-To preview locally:
+To work on the dashboard locally:
 
 ```bash
+npm run dev
+# open http://localhost:5173
+
+# build a production bundle and preview it
 npm run build
-npm run serve
-# open http://localhost:4173
+npm run preview
 ```
 
-The dashboard loads CSVs from the deployed site (`/data/*.csv`) so the scheduled workflow can publish fresh datasets without committing them. To source data from another repository, add `github-owner` and `github-repo` meta values or pass `?owner=<owner>&repo=<repo>` in the query string — the app will fall back to raw GitHub URLs when overrides are provided.
+The dashboard loads CSVs from the repository using relative URLs, so it works automatically on GitHub Pages under a sub-path configured via `import.meta.env.BASE_URL`.
 
 ### Chart Controls & Cards
 
-- **Time ranges** — presets filter the daily dataset to common windows (1D/1W/1M/3M/YTD/ALL).
-- **Summary cards** — show the latest ROI in BTC, alpha vs BTC, and NAV denominated in BTC.
+- **Time ranges** — presets filter the daily dataset to common windows (1D/1M/3M/6M/ALL).
+- **Summary cards** — show the latest VLHXBTC and WBTC prices, plus the performance spread over the selected window.
 - **Auto refresh** — refreshes data every 10 minutes.
 
-Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/dashboard.js`.
+Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**/*`, or `src/styles/global.css`.
 
 ## Data Sources & Caveats
 
@@ -108,17 +109,16 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 
 - **PoolLogic address** — update the `POOL_LOGIC_ADDRESS` constant in `src/config.ts`.
 - **RPC endpoints** — set `ARBITRUM_RPC` / `ARBITRUM_RPC_FALLBACKS` env vars.
-- **Chart branding** — tweak typography/colors in `public/index.html` and `public/dashboard.js`.
+- **Chart branding** — tweak typography/colors in `src/styles/global.css` and chart components under `src/components/`.
 
 ## Repository Structure
 
 ```
-├── data/                   # Generated CSV outputs (gitignored; run `npm run daily`)
-├── public/                 # Static dashboard source consumed by Vite
-├── src/                    # TypeScript source for exporters and builders
-├── dist-node/              # Compiled Node.js scripts (`npm run build:node`)
+├── public/                 # Static assets for GitHub Pages (CSV exports generated into public/data/)
+├── src/                    # TypeScript source for exporters, builders, and React dashboard
 ├── dist/                   # Production dashboard bundle (`npm run build`)
-└── .github/workflows/      # GitHub Actions for data refresh + deployment
+├── dist-node/              # Compiled collectors (`npm run build:node`)
+└── .github/workflows/      # GitHub Actions for automated deployment
 ```
 
 ## License

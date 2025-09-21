@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-node/
-data/
 .cache/
 pages/
+public/data/*.csv
+!public/data/.gitkeep
