@@ -6,6 +6,7 @@ import type { EChartsOption, EChartsType } from 'echarts';
 export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLDivElement | null> {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<EChartsType | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -18,8 +19,17 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       chart.resize();
     };
     window.addEventListener('resize', handleResize);
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        chart.resize();
+      });
+      observer.observe(element);
+      resizeObserverRef.current = observer;
+    }
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       chart.dispose();
       chartRef.current = null;
     };
@@ -34,6 +44,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       return;
     }
     chartRef.current.setOption(option, true);
+    chartRef.current.resize();
   }, [option]);
 
   return containerRef;

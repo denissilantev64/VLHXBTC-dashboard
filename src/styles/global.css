@@ -137,8 +137,8 @@ h1 {
 .filters-caption {
   font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: #ffffff;
 }
 
