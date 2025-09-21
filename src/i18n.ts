@@ -1,8 +1,8 @@
 export const translations = {
   ru: {
-    title: 'Valhalla BTC против WBTC',
+    title: 'Аналитика Valhalla BTC',
     description:
-      'Ежедневные данные фонда Valhalla BTC, сравнение с динамикой WBTC. Информация обновляется автоматически каждые 10 минут.',
+      'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Информация обновляется автоматически каждые 10 минут.',
     footer: 'Данные получены из открытых источников (CoinGecko, Arbitrum) и обновляются ежедневно. Визуализация с помощью ECharts.',
     cta: 'Начать инвестировать',
     filters: {
@@ -14,6 +14,7 @@ export const translations = {
       ALL: 'Всё',
     },
     filtersLabel: 'Выбор периода',
+    periodLabel: 'Данные за период',
     cards: {
       vlhx: { label: 'VLHXBTC', change: 'Изменение за период' },
       wbtc: { label: 'WBTC', change: 'Изменение за период' },
@@ -43,9 +44,9 @@ export const translations = {
     },
   },
   en: {
-    title: 'Valhalla BTC vs WBTC',
+    title: 'Valhalla BTC Analytics',
     description:
-      'Daily metrics for the Valhalla BTC fund benchmarked against WBTC. Data refreshes automatically every 10 minutes.',
+      'Performance of the Valhalla BTC fund versus holding Bitcoin directly. Data refreshes automatically every 10 minutes.',
     footer: 'Data is sourced from public feeds (CoinGecko, Arbitrum) and updates daily. Visualised with ECharts.',
     cta: 'Start investing',
     filters: {
@@ -57,6 +58,7 @@ export const translations = {
       ALL: 'All',
     },
     filtersLabel: 'Select time range',
+    periodLabel: 'Data for period',
     cards: {
       vlhx: { label: 'VLHXBTC', change: 'Change over period' },
       wbtc: { label: 'WBTC', change: 'Change over period' },
