@@ -52,34 +52,26 @@
         height: 16px;
       }
 
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-
       .invest-button {
         display: none;
-        align-items: center;
-        justify-content: center;
-        width: 197px;
-        height: 40px;
-        padding: 8px 24px;
-        box-sizing: border-box;
-        border-radius: 0;
-        background: #ffffff;
-        color: #000000;
+        background: transparent;
+        color: #ffffff;
         font-size: 0.875rem;
         font-weight: 600;
         text-decoration: none;
         letter-spacing: 0.02em;
-        transition: background 0.2s ease, color 0.2s ease;
+        transition: color 0.2s ease;
       }
 
       .invest-button:hover,
       .invest-button:focus {
-        background: #f1f1f1;
-        color: #000000;
+        color: #00a0d0;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 24px;
       }
 
       .language-toggle {
@@ -276,6 +268,8 @@
       @media (min-width: 1200px) {
         .invest-button {
           display: inline-flex;
+          padding: 10px 24px;
+          margin: 18px 0;
         }
 
         h1 {
