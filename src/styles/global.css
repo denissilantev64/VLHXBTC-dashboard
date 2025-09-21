@@ -125,6 +125,13 @@ h1 {
   gap: 0;
   flex-wrap: wrap;
   justify-content: flex-start;
+  border: 1px solid #666666;
+  border-radius: 9999px;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  justify-self: start;
+  width: fit-content;
 }
 
 .filters button {
@@ -146,6 +153,29 @@ h1 {
 .filters button:hover,
 .filters button:focus-visible {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.filters button:focus {
+  outline: none;
+}
+
+.filters button.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+.filters button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filters button:disabled:hover,
+.filters button:disabled:focus-visible {
+  background: transparent;
+}
+
+.filters button.hidden {
+  display: none;
 }
 
 .cards {
@@ -224,13 +254,6 @@ footer {
     --page-padding-y: 80px;
   }
 
-  .logo-link img {
-    height: 20px;
-  }
-
-  .filters {
-    gap: 16px;
-  }
 
   .cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
