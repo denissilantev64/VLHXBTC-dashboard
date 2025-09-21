@@ -4,16 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js",
-    "serve": "npx http-server public"
+    "dev": "vite",
+    "build": "vite build && tsc",
+    "preview": "vite preview",
+    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js"
   },
   "dependencies": {
+    "echarts": "^6.0.0",
     "ethers": "^6.11.1",
-    "global-agent": "^3.0.0"
+    "global-agent": "^3.0.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.4.5"
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.6"
   }
 }

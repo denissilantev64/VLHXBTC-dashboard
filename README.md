@@ -8,7 +8,7 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
 - Production-ready GitHub Actions that backfill data, append new rows, commit updates, and deploy GitHub Pages.
-- Lightweight static dashboard (ECharts) with preset time range filters (1D/1W/1M/3M/YTD/ALL) that reads CSVs directly from the repository.
+- Lightweight React + Vite dashboard (ECharts) with preset time range filters (1D/1M/3M/6M/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
 ## Getting Started
@@ -29,19 +29,19 @@ npm install
 Run the daily jobs locally. The first run backfills 365 days of NAV data.
 
 ```bash
-# Build TypeScript -> dist/
+# Build TypeScript collectors and the dashboard
 npm run build
 
 # Run daily collectors (NAV, BTC, WBTC, derived metrics)
 npm run daily
 ```
 
-CSV outputs are written into the `data/` directory:
+CSV outputs are written into the `public/data/` directory:
 
-- `data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
-- `data/btc_usd_daily.csv` — `day,btc_usd`
-- `data/wbtc_usd_daily.csv` — `day,wbtc_usd`
-- `data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
+- `public/data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
+- `public/data/btc_usd_daily.csv` — `day,btc_usd`
+- `public/data/wbtc_usd_daily.csv` — `day,wbtc_usd`
+- `public/data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
 
 All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
@@ -70,30 +70,33 @@ One workflow lives under `.github/workflows/`:
 3. Wait for the `Deploy to GitHub Pages` job to finish — the Pages status badge in the run turns green when deployment succeeds.
 4. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
-After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/`.
+After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/` (copied from `public/data/`).
 
 
 ## Dashboard
 
 The static dashboard is served from `public/` and deployed to GitHub Pages.
 
-To preview locally:
+To work on the dashboard locally:
 
 ```bash
+npm run dev
+# open http://localhost:5173
+
+# build a production bundle and preview it
 npm run build
-npm run serve
-# open http://localhost:8080
+npm run preview
 ```
 
-The dashboard loads CSVs from the repository using raw GitHub URLs. When hosted on GitHub Pages (e.g., `https://<owner>.github.io/<repo>/`), it automatically infers the repo owner/name. For alternative hosting, add `github-owner` and `github-repo` meta values or pass `?owner=<owner>&repo=<repo>` in the query string.
+The dashboard loads CSVs from the repository using relative URLs, so it works automatically on GitHub Pages under a sub-path configured via `import.meta.env.BASE_URL`.
 
 ### Chart Controls & Cards
 
-- **Time ranges** — presets filter the daily dataset to common windows (1D/1W/1M/3M/YTD/ALL).
-- **Summary cards** — show the latest ROI in BTC, alpha vs BTC, and NAV denominated in BTC.
+- **Time ranges** — presets filter the daily dataset to common windows (1D/1M/3M/6M/ALL).
+- **Summary cards** — show the latest VLHXBTC and WBTC prices, plus the performance spread over the selected window.
 - **Auto refresh** — refreshes data every 10 minutes.
 
-Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/dashboard.js`.
+Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**/*`, or `src/styles/global.css`.
 
 ## Data Sources & Caveats
 
@@ -106,14 +109,13 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 
 - **PoolLogic address** — update the `POOL_LOGIC_ADDRESS` constant in `src/config.ts`.
 - **RPC endpoints** — set `ARBITRUM_RPC` / `ARBITRUM_RPC_FALLBACKS` env vars.
-- **Chart branding** — tweak typography/colors in `public/index.html` and `public/dashboard.js`.
+- **Chart branding** — tweak typography/colors in `src/styles/global.css` and chart components under `src/components/`.
 
 ## Repository Structure
 
 ```
-├── data/                   # CSV artifacts committed to the repo
-├── public/                 # Static dashboard deployed to GitHub Pages
-├── src/                    # TypeScript source for exporters and builders
+├── public/                 # Static assets for GitHub Pages (includes data/ CSVs)
+├── src/                    # TypeScript source for exporters, builders, and React dashboard
 ├── dist/                   # Compiled JS (ignored until `npm run build`)
 └── .github/workflows/      # GitHub Actions for daily automation
 ```
