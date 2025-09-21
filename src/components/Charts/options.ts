@@ -236,7 +236,7 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
     tooltip: {
       trigger: 'axis',
       show: true,
-      backgroundColor: 'rgba(12, 18, 32, 0.96)',
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
 
       borderColor: 'rgba(255, 255, 255, 0.08)',
       borderWidth: 1,
@@ -247,7 +247,7 @@ function createCommonChartOptions(locale: string, range: RangeKey): EChartsOptio
         'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); pointer-events: none;',
       axisPointer: {
         type: 'line',
-        lineStyle: { color: colors.accent, width: 1 },
+        lineStyle: { color: 'rgba(255, 255, 255, 0.7)', type: 'dashed', width: 1 },
         label: { show: false },
       },
     },
