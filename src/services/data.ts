@@ -265,13 +265,20 @@ export function formatCurrency(value: number | null | undefined, locale: string)
   return formatter.format(value!);
 }
 
-export function formatPercent(value: number | null | undefined, digits = 2): string {
+export function formatPercent(
+  value: number | null | undefined,
+  locale: string,
+  digits = 2,
+): string {
   if (!Number.isFinite(value ?? Number.NaN)) {
     return '--';
   }
-  const formatted = (value as number).toFixed(digits);
-  const prefix = (value as number) > 0 ? '+' : '';
-  return `${prefix}${formatted}%`;
+  const formatter = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: 'exceptZero',
+  });
+  return `${formatter.format(value as number)}%`;
 }
 
 export function computePercentChangeData(filtered: DailyEntry[], key: keyof DailyEntry): PercentChangePoint[] {
