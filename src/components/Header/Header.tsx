@@ -55,23 +55,26 @@ export const Header: FC<HeaderProps> = ({
         <h1>{translation.title}</h1>
         <p className="description">{translation.description}</p>
       </div>
-      <div className="filters" role="group" aria-label={translation.filtersLabel}>
-        {RANGE_ORDER.map((key) => {
-          const isAvailable = availableRanges.includes(key);
-          const className = [key === range ? 'active' : '', isAvailable ? '' : 'hidden'].filter(Boolean).join(' ');
-          return (
-            <button
-              key={key}
-              type="button"
-              data-range={key}
-              className={className}
-              onClick={() => onRangeChange(key)}
-              disabled={!isAvailable}
-            >
-              {translation.filters[key] ?? key}
-            </button>
-          );
-        })}
+      <div className="filters-row">
+        <span className="filters-caption">{translation.periodLabel}</span>
+        <div className="filters" role="group" aria-label={translation.filtersLabel}>
+          {RANGE_ORDER.map((key) => {
+            const isAvailable = availableRanges.includes(key);
+            const className = [key === range ? 'active' : '', isAvailable ? '' : 'hidden'].filter(Boolean).join(' ');
+            return (
+              <button
+                key={key}
+                type="button"
+                data-range={key}
+                className={className}
+                onClick={() => onRangeChange(key)}
+                disabled={!isAvailable}
+              >
+                {translation.filters[key] ?? key}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </header>
   );

@@ -17,7 +17,7 @@ export const ChartsSection: FC<ChartsSectionProps> = ({ data, translation, local
   const diffOption = useMemo(() => buildDiffOption(data, translation, locale), [data, translation, locale]);
 
   return (
-    <section className="grid grid-cols-1 gap-8 lg:grid-cols-2 xl:grid-cols-3">
+    <section className="chart-grid">
       <ChartCard title={translation.charts.price.title} option={priceOption} />
       <ChartCard title={translation.charts.change.title} option={changeOption} />
       <ChartCard title={translation.charts.diff.title} option={diffOption} />
