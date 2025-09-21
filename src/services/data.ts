@@ -1,4 +1,4 @@
-export type RangeKey = '1D' | '1M' | '3M' | '6M' | 'ALL';
+export type RangeKey = '1D' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
 interface RangeConfig {
   days?: number;
@@ -10,10 +10,11 @@ export const RANGE_CONFIG: Record<RangeKey, RangeConfig> = {
   '1M': { days: 30 },
   '3M': { days: 90 },
   '6M': { days: 180 },
+  '1Y': { days: 365 },
   ALL: { all: true },
 };
 
-export const RANGE_ORDER: RangeKey[] = ['1D', '1M', '3M', '6M', 'ALL'];
+export const RANGE_ORDER: RangeKey[] = ['1D', '1M', '3M', '6M', '1Y', 'ALL'];
 
 const DATA_SOURCES = {
   nav: 'data/nav_btc_daily.csv',

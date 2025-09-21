@@ -122,33 +122,57 @@ h1 {
 }
 
 .filters {
-  display: flex;
-  gap: 12px;
+  display: inline-flex;
+  gap: 0;
   flex-wrap: wrap;
   justify-content: flex-start;
+  border: 1px solid #666666;
+  border-radius: 9999px;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  justify-self: start;
+  width: fit-content;
 }
 
 .filters button {
-  border: 1px solid #1f1f1f;
-  background: #0d0d0d;
+  border: none;
+  background: transparent;
   color: #ffffff;
   font-size: 0.875rem;
   font-weight: 600;
   padding: 10px 18px;
-  border-radius: 9999px;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.filters button + button {
+  border-left: 1px solid #666666;
 }
 
 .filters button:hover,
+.filters button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .filters button:focus {
-  background: #1f1f1f;
+  outline: none;
 }
 
 .filters button.active {
-  background: #00a0d0;
-  border-color: #00a0d0;
+  background: #ffffff;
   color: #000000;
+}
+
+.filters button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filters button:disabled:hover,
+.filters button:disabled:focus-visible {
+  background: transparent;
 }
 
 .filters button.hidden {
@@ -235,10 +259,6 @@ footer {
   :root {
     --page-padding-x: 80px;
     --page-padding-y: 80px;
-  }
-
-  .filters {
-    gap: 16px;
   }
 
   .cards {
