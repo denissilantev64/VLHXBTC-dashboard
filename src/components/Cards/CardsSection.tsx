@@ -26,7 +26,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
   return (
     <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <article
-        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        className="flex flex-col gap-3 rounded-[8px] border border-white/40 p-[clamp(20px,2.5vw,28px)]"
         aria-live="polite"
       >
         <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
@@ -42,7 +42,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
         </span>
       </article>
       <article
-        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        className="flex flex-col gap-3 rounded-[8px] border border-white/40 p-[clamp(20px,2.5vw,28px)]"
         aria-live="polite"
       >
         <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
@@ -58,7 +58,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
         </span>
       </article>
       <article
-        className="flex flex-col gap-3 p-[clamp(20px,2.5vw,28px)]"
+        className="flex flex-col gap-3 rounded-[8px] border border-white/40 p-[clamp(20px,2.5vw,28px)]"
         aria-live="polite"
       >
         <span className="label text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">

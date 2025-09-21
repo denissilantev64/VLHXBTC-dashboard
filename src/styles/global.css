@@ -178,38 +178,6 @@ h1 {
   display: none;
 }
 
-.cards {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.card {
-  background: #0d0d0d;
-  border-radius: 16px;
-  padding: clamp(20px, 2.5vw, 28px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.card .label {
-  font-size: clamp(0.75rem, 1vw, 0.875rem);
-  font-weight: 600;
-  color: #b3b3b3;
-}
-
-.card .value {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  font-weight: 700;
-}
-
-.card .delta {
-  font-size: clamp(0.75rem, 1vw, 0.875rem);
-  font-weight: 600;
-  color: #b3b3b3;
-}
-
 .delta.positive,
 .value.positive {
   color: #4caf50;
@@ -218,28 +186,6 @@ h1 {
 .delta.negative,
 .value.negative {
   color: #ff5252;
-}
-
-.chart-grid {
-  display: grid;
-  gap: 32px;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.chart {
-  background: #0d0d0d;
-  border-radius: 16px;
-  padding: clamp(20px, 2.5vw, 32px) clamp(20px, 2.5vw, 32px) clamp(16px, 2vw, 28px);
-}
-
-.chart h2 {
-  margin: 0 0 16px;
-  font-size: clamp(1.125rem, 1.4vw, 1.5rem);
-}
-
-.chart-container {
-  width: 100%;
-  height: clamp(240px, 32vw, 420px);
 }
 
 footer {
@@ -253,7 +199,6 @@ footer {
     --page-padding-x: 80px;
     --page-padding-y: 80px;
   }
-
 
   .cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -283,14 +228,6 @@ footer {
   .filters {
     grid-column: 1 / -1;
     justify-content: flex-start;
-  }
-
-  .cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .chart-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
