@@ -38,7 +38,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
         <span
           className={`delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400 ${getDeltaClass(stats.vlhx.change)}`}
         >
-          {translation.cards.vlhx.change}: {formatPercent(stats.vlhx.change)}
+          {translation.cards.vlhx.change}: {formatPercent(stats.vlhx.change, locale)}
         </span>
       </article>
       <article
@@ -54,7 +54,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
         <span
           className={`delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400 ${getDeltaClass(stats.wbtc.change)}`}
         >
-          {translation.cards.wbtc.change}: {formatPercent(stats.wbtc.change)}
+          {translation.cards.wbtc.change}: {formatPercent(stats.wbtc.change, locale)}
         </span>
       </article>
       <article
@@ -65,7 +65,7 @@ export const CardsSection: FC<CardsSectionProps> = ({ stats, translation, locale
           {translation.cards.spread.label}
         </span>
         <span className={`value text-[clamp(1.75rem,3vw,2.5rem)] font-bold ${getDeltaClass(stats.spread.delta)}`}>
-          {formatPercent(stats.spread.delta)}
+          {formatPercent(stats.spread.delta, locale)}
         </span>
         <span className="delta text-[clamp(0.75rem,1vw,0.875rem)] font-semibold text-neutral-400">
           {translation.cards.spread.note}

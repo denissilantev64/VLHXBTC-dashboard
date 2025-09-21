@@ -424,7 +424,7 @@ export function buildChangeOption(
   option.legend = { ...option.legend, data: [] };
   option.tooltip = {
     ...option.tooltip,
-    formatter: createTooltipFormatter(locale, (val) => formatPercent(val), range),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val, locale), range),
   };
   option.yAxis = {
     type: 'value',
@@ -473,7 +473,7 @@ export function buildDiffOption(
   option.legend = { ...option.legend, data: [translation.charts.diff.series.diff] };
   option.tooltip = {
     ...option.tooltip,
-    formatter: createTooltipFormatter(locale, (val) => formatPercent(val), range),
+    formatter: createTooltipFormatter(locale, (val) => formatPercent(val, locale), range),
   };
   option.yAxis = {
     type: 'value',

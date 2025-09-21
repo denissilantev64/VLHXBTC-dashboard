@@ -18,7 +18,10 @@ export const translations = {
     cards: {
       vlhx: { label: 'VLHXBTC', change: 'Изменение за период' },
       wbtc: { label: 'WBTC', change: 'Изменение за период' },
-      spread: { label: 'Разница в изменении', note: 'Изменение VLHXBTC минус изменение WBTC' },
+      spread: {
+        label: 'Доходность фонда в BTC',
+        note: 'Преимущество VLHXBTC относительно изменения WBTC',
+      },
     },
     charts: {
       price: {
