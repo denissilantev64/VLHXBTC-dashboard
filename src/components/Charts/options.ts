@@ -387,7 +387,10 @@ function buildLineSeries({ name, data, color, yAxisIndex = 0 }: LineSeriesConfig
   };
 }
 
-function computeBounds(values: Array<[number, number]>): { min: number; max: number } | null {
+function computeBounds(
+  values: Array<[number, number]>,
+  paddingFactor = 0.12,
+): { min: number; max: number } | null {
   if (!values.length) {
     return null;
   }
@@ -403,11 +406,12 @@ function computeBounds(values: Array<[number, number]>): { min: number; max: num
     return null;
   }
   if (min === max) {
-    const delta = Math.abs(min) * 0.05 || 1;
+    const padding = Math.abs(min) * paddingFactor;
+    const delta = padding || 1;
     return { min: min - delta, max: max + delta };
   }
   const spread = max - min;
-  const padding = spread * 0.12;
+  const padding = spread * paddingFactor;
   return { min: min - padding, max: max + padding };
 }
 
@@ -444,8 +448,9 @@ export function buildPriceOption(
   }
   const option = createCommonChartOptions(locale, range, [wbtc, vlhx]);
   option.legend = { ...option.legend, data: [] };
-  const wbtcBounds = computeBounds(wbtc);
-  const vlhxBounds = computeBounds(vlhx);
+  const pricePaddingFactor = 0.08;
+  const wbtcBounds = computeBounds(wbtc, pricePaddingFactor);
+  const vlhxBounds = computeBounds(vlhx, pricePaddingFactor);
   option.yAxis = [
     {
       type: 'value',
@@ -524,12 +529,32 @@ export function buildChangeOption(
     ...option.tooltip,
     formatter: createTooltipFormatter(locale, (val) => formatPercent(val, locale), range),
   };
+  let minChange = Number.POSITIVE_INFINITY;
+  let maxChange = Number.NEGATIVE_INFINITY;
+  [navSeries, wbtcSeries].forEach((series) => {
+    series.forEach(([, value]) => {
+      if (Number.isFinite(value)) {
+        minChange = Math.min(minChange, value);
+        maxChange = Math.max(maxChange, value);
+      }
+    });
+  });
+
+  const hasChangeValues = Number.isFinite(minChange) && Number.isFinite(maxChange);
+  const maxAbsChange = hasChangeValues
+    ? Math.max(Math.abs(minChange), Math.abs(maxChange))
+    : 0;
+  const changePadding = maxAbsChange === 0 ? 1 : maxAbsChange * 0.1;
+  const axisLimit = maxAbsChange + changePadding;
+
   option.yAxis = {
     type: 'value',
     axisLine: { show: false },
     axisLabel: { color: colors.subtleText, formatter: (value: number) => `${value.toFixed(1)}%` },
     splitLine: { lineStyle: { color: colors.grid } },
     axisPointer: { show: false },
+    min: hasChangeValues ? -axisLimit : undefined,
+    max: hasChangeValues ? axisLimit : undefined,
   };
   const series: unknown[] = [];
   if (wbtcSeries.length > 0) {
