@@ -7,7 +7,7 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
-- Production-ready GitHub Actions that backfill data, append new rows, commit updates, and deploy GitHub Pages.
+- Production-ready GitHub Actions pipeline that refreshes datasets, builds the dashboard, and deploys GitHub Pages without manual commits.
 - Lightweight React + Vite dashboard (ECharts) with preset time range filters (1D/1M/3M/6M/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
@@ -29,11 +29,11 @@ npm install
 Run the daily jobs locally. The first run backfills 365 days of NAV data.
 
 ```bash
-# Build TypeScript collectors and the dashboard
-npm run build
-
-# Run daily collectors (NAV, BTC, WBTC, derived metrics)
+# Compile collectors and refresh CSV exports (first run backfills 365 days)
 npm run daily
+
+# Build the dashboard bundle with the freshly generated CSVs
+npm run build
 ```
 
 CSV outputs are written into the `public/data/` directory:
@@ -52,26 +52,25 @@ By default the exporter uses the public Arbitrum RPC. Override or add fallbacks 
 ```bash
 export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
 export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
+export GITHUB_PAGES_BASE="/VLHXBTC-dashboard/" # optional for local parity with GitHub Pages
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints.
+Create a `.env` or add these variables in GitHub Secrets to use premium endpoints. The deploy workflow automatically injects `GITHUB_PAGES_BASE` so static assets resolve correctly on Pages.
 
 ## GitHub Actions
 
 One workflow lives under `.github/workflows/`:
 
-- `daily.yml` — runs once per day at 23:00 UTC and via manual dispatch. It executes the NAV/BTC/WBTC collectors, derives metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
+- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes the collectors via `npm run daily`, builds the static dashboard with the GitHub Pages base path, and uploads the `dist/` artifact for deployment.
 
 
 ### Publishing to GitHub Pages
 
 1. Open **Settings → Pages** inside this repository and set **Source = GitHub Actions**. This only needs to be done once.
-2. Trigger the workflow the first time via **Actions → Daily Data Update → Run workflow** (the scheduled cron run will handle subsequent days).
-3. Wait for the `Deploy to GitHub Pages` job to finish — the Pages status badge in the run turns green when deployment succeeds.
-4. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
+2. Push to `main` or wait for the nightly cron run. The workflow refreshes CSVs, builds the dashboard, and deploys automatically — no manual commits or uploads are required.
+3. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
-After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/` (copied from `public/data/`).
-
+The production dashboard is served from GitHub Pages at `https://denissilantev64.github.io/VLHXBTC-dashboard/`.
 
 ## Dashboard
 
@@ -116,8 +115,9 @@ Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**
 ```
 ├── public/                 # Static assets for GitHub Pages (includes data/ CSVs)
 ├── src/                    # TypeScript source for exporters, builders, and React dashboard
-├── dist/                   # Compiled JS (ignored until `npm run build`)
-└── .github/workflows/      # GitHub Actions for daily automation
+├── dist/                   # Compiled JS for both collectors and dashboard (`npm run build`)
+└── .github/workflows/      # GitHub Actions for automated deployment
+
 ```
 
 ## License
