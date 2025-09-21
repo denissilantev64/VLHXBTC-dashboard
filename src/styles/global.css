@@ -42,6 +42,7 @@ body {
 .top-bar {
   display: grid;
   gap: clamp(24px, 4vw, 48px);
+  padding: 18px 0;
 }
 
 .header-nav {
@@ -71,6 +72,7 @@ body {
   text-decoration: none;
   letter-spacing: 0.02em;
   transition: none;
+  border-radius: 0;
 }
 
 .header-actions {
@@ -123,10 +125,6 @@ h1 {
   gap: 0;
   flex-wrap: wrap;
   justify-content: flex-start;
-  border: 1px solid #666666;
-  border-radius: 9999px;
-  padding: 0;
-  background: transparent;
 }
 
 .filters button {
@@ -150,27 +148,36 @@ h1 {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.filters button:focus {
-  outline: none;
+.cards {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.filters button.active {
-  background: #ffffff;
-  color: #000000;
+.card {
+  background: #0d0d0d;
+  border-radius: 16px;
+  padding: clamp(20px, 2.5vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.filters button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.card .label {
+  font-size: clamp(0.75rem, 1vw, 0.875rem);
+  font-weight: 600;
+  color: #b3b3b3;
 }
 
-.filters button:disabled:hover,
-.filters button:disabled:focus-visible {
-  background: transparent;
+.card .value {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
 }
 
-.filters button.hidden {
-  display: none;
+.card .delta {
+  font-size: clamp(0.75rem, 1vw, 0.875rem);
+  font-weight: 600;
+  color: #b3b3b3;
 }
 
 .delta.positive,
@@ -181,6 +188,28 @@ h1 {
 .delta.negative,
 .value.negative {
   color: #ff5252;
+}
+
+.chart-grid {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart {
+  background: #0d0d0d;
+  border-radius: 16px;
+  padding: clamp(20px, 2.5vw, 32px) clamp(20px, 2.5vw, 32px) clamp(16px, 2vw, 28px);
+}
+
+.chart h2 {
+  margin: 0 0 16px;
+  font-size: clamp(1.125rem, 1.4vw, 1.5rem);
+}
+
+.chart-container {
+  width: 100%;
+  height: clamp(240px, 32vw, 420px);
 }
 
 footer {
@@ -196,7 +225,15 @@ footer {
   }
 
   .logo-link img {
-    height: 16px;
+    height: 20px;
+  }
+
+  .filters {
+    gap: 16px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -224,6 +261,14 @@ footer {
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
+
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 1200px) {
@@ -235,7 +280,11 @@ footer {
   .invest-button {
     display: inline-flex;
     padding: 10px 24px;
-    border-radius: 9999px;
+  }
+
+  .chart-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
   }
 }
 
