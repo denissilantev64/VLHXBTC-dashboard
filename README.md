@@ -36,12 +36,14 @@ npm run build
 npm run daily
 ```
 
-CSV outputs are written into the `data/` directory:
+CSV outputs are written into the gitignored `data/` directory:
 
 - `data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
 - `data/btc_usd_daily.csv` — `day,btc_usd`
 - `data/wbtc_usd_daily.csv` — `day,wbtc_usd`
 - `data/nav_btc_daily.csv` — `day,nav_usd,btc_usd,nav_btc,roi_in_btc,roi_in_usd,alpha_vs_btc`
+
+> **Note:** Because `data/` is generated on the fly it is excluded from version control. Run `npm run daily` before `npm run build` or `npm run serve` to populate CSVs locally.
 
 All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
@@ -70,7 +72,7 @@ The deploy pipeline lives under `.github/workflows/`:
 2. Push to `main` or wait for the nightly schedule. The workflow uploads the `dist/` bundle and CSVs as a Pages artifact automatically.
 3. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
-Once the deployment job finishes, the dashboard is available at `https://<owner>.github.io/VLHXBTC-dashboard/` with CSVs served from the same Pages site under `/data/`.
+Once the deployment job finishes, the dashboard is available at `https://<owner>.github.io/VLHXBTC-dashboard/`. The workflow bundles freshly generated CSVs into the published artifact so the dashboard always reads the latest `/data/*.csv` files from Pages.
 
 
 ## Dashboard
@@ -111,7 +113,7 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 ## Repository Structure
 
 ```
-├── data/                   # CSV artifacts committed to the repo
+├── data/                   # Generated CSV outputs (gitignored; run `npm run daily`)
 ├── public/                 # Static dashboard source consumed by Vite
 ├── src/                    # TypeScript source for exporters and builders
 ├── dist-node/              # Compiled Node.js scripts (`npm run build:node`)
