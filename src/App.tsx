@@ -21,7 +21,7 @@ function getLocale(language: Language): string {
 
 export function App(): JSX.Element {
   const [language, setLanguage] = useState<Language>(defaultLanguage);
-  const [range, setRange] = useState<RangeKey>('1D');
+  const [range, setRange] = useState<RangeKey>('ALL');
   const [data, setData] = useState<DailyEntry[]>([]);
 
   useEffect(() => {
