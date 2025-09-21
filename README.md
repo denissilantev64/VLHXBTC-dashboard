@@ -7,7 +7,7 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
-- Automated GitHub Actions workflow that refreshes datasets, builds the dashboard, and deploys GitHub Pages without manual commits.
+- Production-ready GitHub Actions pipeline that refreshes datasets, builds the dashboard, and deploys GitHub Pages without manual commits.
 - Lightweight React + Vite dashboard (ECharts) with preset time range filters (1D/1M/3M/6M/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
@@ -36,7 +36,7 @@ npm run daily
 npm run build
 ```
 
-CSV outputs are written into the gitignored `public/data/` directory:
+CSV outputs are written into the `public/data/` directory:
 
 - `public/data/nav_tokenprice_usd_daily.csv` — `day,token_price_usd`
 - `public/data/btc_usd_daily.csv` — `day,btc_usd`
@@ -114,10 +114,9 @@ Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**
 ## Repository Structure
 
 ```
-├── public/                 # Static assets for GitHub Pages (CSV exports generated into public/data/)
+├── public/                 # Static assets for GitHub Pages (includes data/ CSVs)
 ├── src/                    # TypeScript source for exporters, builders, and React dashboard
-├── dist/                   # Production dashboard bundle (`npm run build`)
-├── dist-node/              # Compiled collectors (`npm run build:node`)
+├── dist/                   # Compiled JS for both collectors and dashboard (`npm run build`)
 └── .github/workflows/      # GitHub Actions for automated deployment
 ```
 

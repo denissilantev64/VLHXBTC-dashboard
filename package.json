@@ -5,11 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:web",
-    "build:web": "vite build",
-    "build:node": "tsc --project tsconfig.node.json",
+    "build": "vite build && tsc",
     "preview": "vite preview",
-    "daily": "npm run build:node && node dist-node/export_token_price_daily.js && node dist-node/fetch_btc_daily.js && node dist-node/fetch_wbtc_daily.js && node dist-node/build_nav_btc_daily.js"
+    "daily": "tsc && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js"
   },
   "dependencies": {
     "echarts": "^6.0.0",
