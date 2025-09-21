@@ -130,17 +130,17 @@ function detectRepo() {
   const ownerMeta = getMetaContent('github-owner');
   const repoMeta = getMetaContent('github-repo');
   if (ownerParam && repoParam) {
-    return { owner: ownerParam, repo: repoParam };
+    return { owner: ownerParam, repo: repoParam, source: 'query' };
   }
   if (ownerMeta && repoMeta) {
-    return { owner: ownerMeta, repo: repoMeta };
+    return { owner: ownerMeta, repo: repoMeta, source: 'meta' };
   }
   const host = window.location.hostname;
   if (host.endsWith('.github.io')) {
     const owner = host.replace('.github.io', '');
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     if (pathParts.length > 0) {
-      return { owner, repo: pathParts[0] };
+      return { owner, repo: pathParts[0], source: 'host' };
     }
   }
   return null;
@@ -151,12 +151,14 @@ function resolveCsvUrl(pathOrUrl) {
   if (/^https?:/i.test(pathOrUrl)) {
     return pathOrUrl;
   }
-  const repo = detectRepo();
-  if (!repo) {
-    return pathOrUrl;
-  }
   const path = pathOrUrl.replace(/^\//, '');
-  return `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/main/${path}`;
+  const repo = detectRepo();
+  if (repo && repo.source !== 'host') {
+    return `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/main/${path}`;
+  }
+  const basePath = (import.meta && import.meta.env && import.meta.env.BASE_URL) || '/';
+  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+  return `${normalizedBase}${path}`;
 }
 
 async function fetchCsv(pathOrUrl) {

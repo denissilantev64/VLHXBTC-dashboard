@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "daily": "npm run build && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js",
-    "serve": "npx http-server public"
+    "build": "npm run build:node && npm run build:web",
+    "build:node": "tsc",
+    "build:web": "vite build",
+    "daily": "npm run build:node && node dist-node/export_token_price_daily.js && node dist-node/fetch_btc_daily.js && node dist-node/fetch_wbtc_daily.js && node dist-node/build_nav_btc_daily.js",
+    "serve": "vite preview --host"
   },
   "dependencies": {
     "ethers": "^6.11.1",
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0"
   }
 }

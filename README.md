@@ -7,7 +7,7 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily collection of the vault NAV per share (`tokenPrice()` on the PoolLogic contract).
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
-- Production-ready GitHub Actions that backfill data, append new rows, commit updates, and deploy GitHub Pages.
+- Automated GitHub Actions workflow that backfills data, updates CSVs, and publishes the dashboard to GitHub Pages without manual steps.
 - Lightweight static dashboard (ECharts) with preset time range filters (1D/1W/1M/3M/YTD/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
@@ -29,7 +29,7 @@ npm install
 Run the daily jobs locally. The first run backfills 365 days of NAV data.
 
 ```bash
-# Build TypeScript -> dist/
+# Build TypeScript -> dist-node/
 npm run build
 
 # Run daily collectors (NAV, BTC, WBTC, derived metrics)
@@ -52,25 +52,25 @@ By default the exporter uses the public Arbitrum RPC. Override or add fallbacks 
 ```bash
 export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
 export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
+export GITHUB_PAGES_BASE="/VLHXBTC-dashboard/" # optional for local GitHub Pages parity
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints.
+Create a `.env` or add these variables in GitHub Secrets to use premium endpoints. The deploy workflow injects `GITHUB_PAGES_BASE` automatically so the built site uses the correct asset paths on GitHub Pages.
 
 ## GitHub Actions
 
-One workflow lives under `.github/workflows/`:
+The deploy pipeline lives under `.github/workflows/`:
 
-- `daily.yml` — runs once per day at 23:00 UTC and via manual dispatch. It executes the NAV/BTC/WBTC collectors, derives metrics, commits CSVs, and deploys GitHub Pages with the dashboard.
+- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes `npm run daily` to refresh CSV exports, builds the static dashboard with the GitHub Pages base path, and publishes the `dist/` artifact via `actions/deploy-pages`.
 
 
 ### Publishing to GitHub Pages
 
 1. Open **Settings → Pages** inside this repository and set **Source = GitHub Actions**. This only needs to be done once.
-2. Trigger the workflow the first time via **Actions → Daily Data Update → Run workflow** (the scheduled cron run will handle subsequent days).
-3. Wait for the `Deploy to GitHub Pages` job to finish — the Pages status badge in the run turns green when deployment succeeds.
-4. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
+2. Push to `main` or wait for the nightly schedule. The workflow uploads the `dist/` bundle and CSVs as a Pages artifact automatically.
+3. (Optional) Add repository secrets for premium RPC/HTTP providers (e.g. `ARBITRUM_RPC`, `HTTPS_PROXY`) if you need higher-rate endpoints.
 
-After the workflow completes the deployment step, the dashboard is available at `https://<owner>.github.io/<repo>/` and serves the CSVs from `/data/`.
+Once the deployment job finishes, the dashboard is available at `https://<owner>.github.io/VLHXBTC-dashboard/` with CSVs served from the same Pages site under `/data/`.
 
 
 ## Dashboard
@@ -82,10 +82,10 @@ To preview locally:
 ```bash
 npm run build
 npm run serve
-# open http://localhost:8080
+# open http://localhost:4173
 ```
 
-The dashboard loads CSVs from the repository using raw GitHub URLs. When hosted on GitHub Pages (e.g., `https://<owner>.github.io/<repo>/`), it automatically infers the repo owner/name. For alternative hosting, add `github-owner` and `github-repo` meta values or pass `?owner=<owner>&repo=<repo>` in the query string.
+The dashboard loads CSVs from the deployed site (`/data/*.csv`) so the scheduled workflow can publish fresh datasets without committing them. To source data from another repository, add `github-owner` and `github-repo` meta values or pass `?owner=<owner>&repo=<repo>` in the query string — the app will fall back to raw GitHub URLs when overrides are provided.
 
 ### Chart Controls & Cards
 
@@ -112,10 +112,11 @@ Adjust chart copy, colors, or fonts by editing `public/index.html` and `public/d
 
 ```
 ├── data/                   # CSV artifacts committed to the repo
-├── public/                 # Static dashboard deployed to GitHub Pages
+├── public/                 # Static dashboard source consumed by Vite
 ├── src/                    # TypeScript source for exporters and builders
-├── dist/                   # Compiled JS (ignored until `npm run build`)
-└── .github/workflows/      # GitHub Actions for daily automation
+├── dist-node/              # Compiled Node.js scripts (`npm run build:node`)
+├── dist/                   # Production dashboard bundle (`npm run build`)
+└── .github/workflows/      # GitHub Actions for data refresh + deployment
 ```
 
 ## License
