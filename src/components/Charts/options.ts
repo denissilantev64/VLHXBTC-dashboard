@@ -197,6 +197,9 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+const ENHANCED_TOUCH_TRIGGER =
+  'mousemove|click|touchstart|touchmove' as unknown as TooltipOption['triggerOn'];
+
 const TARGET_LABEL_COUNTS: Record<RangeKey, number> = {
   '1D': 6,
   '1M': 6,
@@ -298,12 +301,14 @@ function createCommonChartOptions(
       padding: 16,
       renderMode: 'html',
       appendToBody: true,
+      triggerOn: ENHANCED_TOUCH_TRIGGER,
       extraCssText:
         'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); pointer-events: none;',
       axisPointer: {
         type: 'line',
         lineStyle: { color: 'rgba(255, 255, 255, 0.7)', type: 'dashed', width: 1 },
         label: { show: false },
+        snap: true,
       },
     },
     legend: {
