@@ -201,7 +201,9 @@ h1 {
 }
 
 .chart-card__canvas {
-  min-width: 480px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .delta.positive,
