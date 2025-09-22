@@ -94,6 +94,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const chartRef = useRef<EChartsType | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const observedElementsRef = useRef<HTMLElement[]>([]);
+  const hideTooltipTimeoutRef = useRef<number | null>(null);
 
 
   useEffect(() => {
@@ -140,7 +141,16 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       };
     };
 
+
+    const clearHideTooltipTimeout = () => {
+      if (hideTooltipTimeoutRef.current !== null) {
+        window.clearTimeout(hideTooltipTimeoutRef.current);
+        hideTooltipTimeoutRef.current = null;
+      }
+    };
+
     const showTooltip = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
+      clearHideTooltipTimeout();
       const point = getRelativePoint(event);
       if (!point) {
         return;
@@ -150,8 +160,17 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     };
 
     const hideTooltip = () => {
+      clearHideTooltipTimeout();
       chart.dispatchAction({ type: 'hideTip' });
     };
+
+    const scheduleHideTooltip = () => {
+      clearHideTooltipTimeout();
+      hideTooltipTimeoutRef.current = window.setTimeout(() => {
+        hideTooltip();
+      }, 1200);
+    };
+
 
     const handleTouchStart = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
       showTooltip(params.event);
@@ -162,14 +181,24 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     };
 
     const handleTouchEnd = () => {
+      scheduleHideTooltip();
+    };
+
+    const handleTouchCancel = () => {
+      scheduleHideTooltip();
+    };
+
+    const handleGlobalOut = () => {
+
       hideTooltip();
     };
 
     zr.on('touchstart', handleTouchStart);
     zr.on('touchmove', handleTouchMove);
     zr.on('touchend', handleTouchEnd);
-    zr.on('touchcancel', handleTouchEnd);
-    zr.on('globalout', handleTouchEnd);
+    zr.on('touchcancel', handleTouchCancel);
+    zr.on('globalout', handleGlobalOut);
+
 
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(() => {
@@ -198,8 +227,10 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       zr.off('touchstart', handleTouchStart);
       zr.off('touchmove', handleTouchMove);
       zr.off('touchend', handleTouchEnd);
-      zr.off('touchcancel', handleTouchEnd);
-      zr.off('globalout', handleTouchEnd);
+      zr.off('touchcancel', handleTouchCancel);
+      zr.off('globalout', handleGlobalOut);
+
+      clearHideTooltipTimeout();
 
       const observer = resizeObserverRef.current;
       if (observer) {
