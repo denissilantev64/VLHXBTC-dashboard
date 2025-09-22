@@ -3,7 +3,30 @@ export const translations = {
     title: 'Аналитика Valhalla BTC',
     description:
       'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin.',
-    footer: '',
+    footer: {
+      blockchainNotice: 'Метрики формируются на основе on-chain данных сети Arbitrum.',
+      vlhx: {
+        prefix: 'Стоимость VLHXBTC рассчитываем по данным ',
+        linkLabel: 'смарт-контракта Valhalla BTC',
+        url: 'https://arbiscan.io/address/0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9',
+        suffix: '.',
+      },
+      wbtc: {
+        prefix: 'Справочные цены WBTC поступают из ',
+        sources: [
+          {
+            label: 'API CoinGecko',
+            url: 'https://www.coingecko.com/en/coins/wrapped-bitcoin',
+          },
+          {
+            label: 'API CryptoCompare',
+            url: 'https://www.cryptocompare.com/coins/wbtc/overview',
+          },
+        ],
+        separator: ' и ',
+        suffix: ' (резервный источник).',
+      },
+    },
     cta: 'Начать инвестировать',
     filters: {
       '1D': '1Д',
@@ -50,7 +73,30 @@ export const translations = {
     title: 'Valhalla BTC Analytics',
     description:
       'Performance of the Valhalla BTC fund versus holding Bitcoin directly.',
-    footer: '',
+    footer: {
+      blockchainNotice: 'All analytics are derived from on-chain data on Arbitrum.',
+      vlhx: {
+        prefix: 'VLHXBTC valuations are taken directly from the ',
+        linkLabel: 'Valhalla BTC smart contract',
+        url: 'https://arbiscan.io/address/0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9',
+        suffix: '.',
+      },
+      wbtc: {
+        prefix: 'Reference WBTC quotes rely on the ',
+        sources: [
+          {
+            label: 'CoinGecko API',
+            url: 'https://www.coingecko.com/en/coins/wrapped-bitcoin',
+          },
+          {
+            label: 'CryptoCompare API',
+            url: 'https://www.cryptocompare.com/coins/wbtc/overview',
+          },
+        ],
+        separator: ' with ',
+        suffix: ' as the fallback provider.',
+      },
+    },
     cta: 'Start investing',
     filters: {
       '1D': '1D',
