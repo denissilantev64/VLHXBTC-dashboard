@@ -34,7 +34,7 @@ export const translations = {
       '3M': '3М',
       '6M': '6М',
       '1Y': '1Г',
-      ALL: 'Всё',
+      ALL: 'Все время',
     },
     filtersLabel: 'Выбор периода',
     periodLabel: 'Данные за период',
