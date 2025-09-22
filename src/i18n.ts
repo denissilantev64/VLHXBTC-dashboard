@@ -4,7 +4,7 @@ export const translations = {
     description:
       'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin.',
     footer: {
-      blockchainNotice: 'Метрики формируются на основе on-chain данных сети Arbitrum.',
+      blockchainNotice: 'Метрики формируются на основе on-chain данных сети Arbitrum и обновляются ежедневно.',
       vlhx: {
         prefix: 'Стоимость VLHXBTC рассчитываем по данным ',
         linkLabel: 'смарт-контракта Valhalla BTC',
@@ -74,7 +74,7 @@ export const translations = {
     description:
       'Performance of the Valhalla BTC fund versus holding Bitcoin directly.',
     footer: {
-      blockchainNotice: 'All analytics are derived from on-chain data on Arbitrum.',
+      blockchainNotice: 'All analytics are derived from on-chain data on Arbitrum and updated daily.',
       vlhx: {
         prefix: 'VLHXBTC valuations are taken directly from the ',
         linkLabel: 'Valhalla BTC smart contract',
