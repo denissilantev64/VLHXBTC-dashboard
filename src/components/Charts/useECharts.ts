@@ -138,7 +138,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
       return false;
     };
-
+    
     const getRelativePoint = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
       if (!event) {
         return null;
@@ -166,6 +166,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
         y: pointSource.clientY - bounds.top,
       };
     };
+
 
     const clearHideTooltipTimeout = () => {
       if (hideTooltipTimeoutRef.current !== null) {
@@ -221,6 +222,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       if (params && shouldIgnoreEvent(params.event)) {
         return;
       }
+
       scheduleHideTooltip();
     };
 
@@ -243,6 +245,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     zr.on('mouseup', handlePointerEnd);
 
     zr.on('globalout', handleGlobalOut);
+
 
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(() => {
@@ -268,6 +271,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     return () => {
       window.removeEventListener('resize', resizeChart);
 
+
       zr.off('touchstart', handlePointerActivate);
       zr.off('touchmove', handlePointerMove);
       zr.off('touchend', handlePointerEnd);
@@ -281,6 +285,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       zr.off('mousedown', handlePointerActivate);
       zr.off('mousemove', handlePointerMove);
       zr.off('mouseup', handlePointerEnd);
+
 
       zr.off('globalout', handleGlobalOut);
 
