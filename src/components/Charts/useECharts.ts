@@ -5,8 +5,10 @@ import type { EChartsOption, EChartsType } from 'echarts';
 
 type TooltipConfig = Exclude<EChartsOption['tooltip'], undefined>;
 type TooltipItem = TooltipConfig extends Array<infer Item> ? Item : TooltipConfig;
+type TooltipPoint = [number, number];
+
 type TooltipPositioner = (
-  point: [number, number],
+  point: TooltipPoint,
   params: unknown,
   dom: HTMLDivElement | null,
   rect: unknown,
@@ -15,8 +17,11 @@ type TooltipPositioner = (
 
 function createTooltipPositioner(
   getContainer: () => HTMLElement | null,
+  getCurrentPoint: () => TooltipPoint | null,
 ): TooltipPositioner {
   return ((point, _params, _dom, _rect, size) => {
+    const effectivePoint = getCurrentPoint() ?? point;
+
     const container = getContainer();
     const bounds = container?.getBoundingClientRect();
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
@@ -30,7 +35,7 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
-    let left = chartLeft + point[0] - tooltipWidth / 2;
+    let left = chartLeft + effectivePoint[0] - tooltipWidth / 2;
     const minLeft = chartLeft + 8;
     const maxLeft = chartRight - tooltipWidth - 8;
     if (left < minLeft) {
@@ -39,11 +44,11 @@ function createTooltipPositioner(
       left = maxLeft;
     }
 
-    let top = chartTop + point[1] - tooltipHeight - 16;
+    let top = chartTop + effectivePoint[1] - tooltipHeight - 16;
     const minTop = chartTop + 8;
     const maxTop = chartBottom - tooltipHeight - 8;
     if (top < minTop) {
-      top = chartTop + point[1] + 16;
+      top = chartTop + effectivePoint[1] + 16;
     }
     if (top > maxTop) {
       top = maxTop;
@@ -59,8 +64,9 @@ function createTooltipPositioner(
 function enrichTooltipOption(
   tooltip: EChartsOption['tooltip'],
   getContainer: () => HTMLElement | null,
+  getCurrentPoint: () => TooltipPoint | null,
 ): TooltipConfig {
-  const positioner = createTooltipPositioner(getContainer);
+  const positioner = createTooltipPositioner(getContainer, getCurrentPoint);
 
   const enhance = (input?: TooltipItem): TooltipItem => {
     const base = { ...(input ?? {}) } as TooltipItem & Record<string, unknown>;
@@ -95,6 +101,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const observedElementsRef = useRef<HTMLElement[]>([]);
   const hideTooltipTimeoutRef = useRef<number | null>(null);
+  const lastTooltipPointRef = useRef<TooltipPoint | null>(null);
 
 
   useEffect(() => {
@@ -182,11 +189,21 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
         return;
       }
 
-      chart.dispatchAction({ type: 'showTip', x: point.x, y: point.y });
+      const width = element.clientWidth;
+      const height = element.clientHeight;
+
+      const clampedX = Math.min(Math.max(point.x, 0), width);
+      const clampedY = Math.min(Math.max(point.y, 0), height);
+
+      const constrainedPoint: TooltipPoint = [clampedX, clampedY];
+      lastTooltipPointRef.current = constrainedPoint;
+
+      chart.dispatchAction({ type: 'showTip', x: clampedX, y: clampedY });
     };
 
     const hideTooltip = () => {
       clearHideTooltipTimeout();
+      lastTooltipPointRef.current = null;
       chart.dispatchAction({ type: 'hideTip' });
     };
 
@@ -321,7 +338,11 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       return;
     }
 
-    const tooltip = enrichTooltipOption(option.tooltip, () => containerRef.current);
+    const tooltip = enrichTooltipOption(
+      option.tooltip,
+      () => containerRef.current,
+      () => lastTooltipPointRef.current,
+    );
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
