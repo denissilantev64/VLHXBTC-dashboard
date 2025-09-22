@@ -300,7 +300,6 @@ function createCommonChartOptions(
       borderWidth: 1,
       padding: 16,
       renderMode: 'html',
-      appendToBody: true,
       triggerOn: ENHANCED_TOUCH_TRIGGER,
       extraCssText:
         'backdrop-filter: blur(18px); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); pointer-events: none;',
