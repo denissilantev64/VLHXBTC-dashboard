@@ -114,16 +114,14 @@ function createTooltipPositioner(
 
     const container = getContainer();
     const bounds = container?.getBoundingClientRect();
-    const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
-    const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-
-    const chartLeft = (bounds?.left ?? 0) + scrollX;
-    const chartTop = (bounds?.top ?? 0) + scrollY;
-    const chartRight = (bounds?.right ?? window.innerWidth) + scrollX;
-    const chartBottom = (bounds?.bottom ?? window.innerHeight) + scrollY;
 
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
+
+    const fallbackWidth = size.viewSize?.[0] ?? 0;
+    const fallbackHeight = size.viewSize?.[1] ?? 0;
+    const containerWidth = (bounds?.width ?? fallbackWidth) || tooltipWidth + 16;
+    const containerHeight = (bounds?.height ?? fallbackHeight) || tooltipHeight + 16;
 
     const chart = getChart();
     const anchor = getTooltipAnchor();
@@ -220,16 +218,16 @@ function createTooltipPositioner(
 
     if (anchorPixel) {
       const [pixelX, pixelY] = anchorPixel;
-      anchorPointX = chartLeft + pixelX;
-      anchorPointY = chartTop + pixelY;
+      anchorPointX = pixelX;
+      anchorPointY = pixelY;
     }
 
-    const referenceX = anchorPointX ?? chartLeft + effectivePoint[0];
+    const referenceX = anchorPointX ?? effectivePoint[0];
     let left = referenceX - tooltipWidth / 2;
-    let minLeft = chartLeft + 8;
-    let maxLeft = chartRight - tooltipWidth - 8;
+    let minLeft = 8;
+    let maxLeft = containerWidth - tooltipWidth - 8;
     if (maxLeft < minLeft) {
-      const center = (chartLeft + chartRight - tooltipWidth) / 2;
+      const center = (containerWidth - tooltipWidth) / 2;
       minLeft = center;
       maxLeft = center;
     }
@@ -239,15 +237,13 @@ function createTooltipPositioner(
       left = maxLeft;
     }
 
-    const pointerY = anchorPointY ?? chartTop + effectivePoint[1];
+    const pointerY = anchorPointY ?? effectivePoint[1];
     const gap = 16;
 
-    const rawMinTop = chartTop + 8;
-    const rawMaxTop = chartBottom - tooltipHeight - 8;
-    let minTop = rawMinTop;
-    let maxTop = rawMaxTop;
-    if (rawMaxTop < rawMinTop) {
-      const center = (chartTop + chartBottom - tooltipHeight) / 2;
+    let minTop = 8;
+    let maxTop = containerHeight - tooltipHeight - 8;
+    if (maxTop < minTop) {
+      const center = (containerHeight - tooltipHeight) / 2;
       minTop = center;
       maxTop = center;
     }
