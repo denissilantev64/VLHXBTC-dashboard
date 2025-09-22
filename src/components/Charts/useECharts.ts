@@ -417,9 +417,15 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       let matchedSeriesIndex: number | null = null;
       let matchedDataIndex: number | null = null;
 
-      const axisCoordinate = chart.convertFromPixel({ xAxisIndex: 0 }, [clampedX, 0]);
-      const axisValueCandidate = Array.isArray(axisCoordinate) ? axisCoordinate[0] : axisCoordinate;
-      const axisValue = toFiniteNumber(axisValueCandidate);
+      const axisCoordinate = chart.convertFromPixel({ xAxisIndex: 0 }, clampedX) as unknown;
+      let axisValue: number | null;
+      if (typeof axisCoordinate === 'number') {
+        axisValue = Number.isFinite(axisCoordinate) ? axisCoordinate : null;
+      } else if (Array.isArray(axisCoordinate) && axisCoordinate.length > 0) {
+        axisValue = toFiniteNumber(axisCoordinate[0]);
+      } else {
+        axisValue = toFiniteNumber(axisCoordinate);
+      }
 
       if (axisValue !== null) {
         const option = chart.getOption();
