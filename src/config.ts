@@ -1,6 +1,16 @@
 export const POOL_LOGIC_ADDRESS = '0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9';
-export const ARBITRUM_RPC = process.env.ARBITRUM_RPC ?? 'https://arb1.arbitrum.io/rpc';
-export const ARBITRUM_RPC_FALLBACKS = (process.env.ARBITRUM_RPC_FALLBACKS ?? '')
+const DEFAULT_ARBITRUM_RPC = 'https://arb1.arbitrum.io/rpc';
+const DEFAULT_ARBITRUM_FALLBACKS = [
+  'https://arbitrum.rpc.subquery.network/public',
+  'https://1rpc.io/arb',
+];
+
+export const ARBITRUM_RPC = process.env.ARBITRUM_RPC ?? DEFAULT_ARBITRUM_RPC;
+export const ARBITRUM_RPC_FALLBACKS = (
+  process.env.ARBITRUM_RPC_FALLBACKS?.length
+    ? process.env.ARBITRUM_RPC_FALLBACKS
+    : DEFAULT_ARBITRUM_FALLBACKS.join(',')
+)
   .split(',')
   .map((url) => url.trim())
   .filter((url) => url.length > 0);
