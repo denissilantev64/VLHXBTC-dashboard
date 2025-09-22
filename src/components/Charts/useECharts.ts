@@ -39,12 +39,28 @@ function createTooltipPositioner(
       left = maxLeft;
     }
 
-    let top = chartTop + point[1] - tooltipHeight - 16;
     const minTop = chartTop + 8;
     const maxTop = chartBottom - tooltipHeight - 8;
-    if (top < minTop) {
-      top = chartTop + point[1] + 16;
+    const pointerY = chartTop + point[1];
+    const gap = 16;
+
+    const spaceAbove = pointerY - chartTop - tooltipHeight - gap;
+    const spaceBelow = chartBottom - pointerY - tooltipHeight - gap;
+
+    let top = pointerY - tooltipHeight - gap;
+
+    if (spaceAbove < 0) {
+      const belowPointerTop = pointerY + gap;
+      const lackBelow = Math.max(0, -spaceBelow);
+
+      top = belowPointerTop - lackBelow;
+
+      if (lackBelow > 0 && top < minTop) {
+        const remaining = minTop - top;
+        top += remaining / 2;
+      }
     }
+
     if (top > maxTop) {
       top = maxTop;
     }
