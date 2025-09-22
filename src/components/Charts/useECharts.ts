@@ -113,12 +113,38 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     window.addEventListener('resize', resizeChart);
 
     const zr = chart.getZr();
+
+    const isPointerEvent = (
+      event: TouchEvent | MouseEvent | PointerEvent | undefined,
+    ): event is PointerEvent => {
+      if (!event) {
+        return false;
+      }
+      return 'pointerType' in event;
+    };
+
+    const shouldIgnoreEvent = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
+      if (!event) {
+        return false;
+      }
+
+      if ('touches' in event && event.touches.length > 1) {
+        return true;
+      }
+
+      if (isPointerEvent(event) && event.pointerType === 'touch' && event.isPrimary === false) {
+        return true;
+      }
+
+      return false;
+    };
+    
     const getRelativePoint = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
       if (!event) {
         return null;
       }
 
-      if ('touches' in event && event.touches.length > 1) {
+      if (shouldIgnoreEvent(event)) {
         return null;
       }
 
@@ -171,32 +197,53 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       }, 1200);
     };
 
-
-    const handleTouchStart = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+    const handlePointerActivate = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (shouldIgnoreEvent(params.event)) {
+        return;
+      }
       showTooltip(params.event);
     };
 
-    const handleTouchMove = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+    const handlePointerMove = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (shouldIgnoreEvent(params.event)) {
+        return;
+      }
       showTooltip(params.event);
     };
 
-    const handleTouchEnd = () => {
+    const handlePointerEnd = (params?: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (params && shouldIgnoreEvent(params.event)) {
+        return;
+      }
       scheduleHideTooltip();
     };
 
-    const handleTouchCancel = () => {
+    const handlePointerCancel = (params?: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (params && shouldIgnoreEvent(params.event)) {
+        return;
+      }
+
       scheduleHideTooltip();
     };
 
     const handleGlobalOut = () => {
-
       hideTooltip();
     };
 
-    zr.on('touchstart', handleTouchStart);
-    zr.on('touchmove', handleTouchMove);
-    zr.on('touchend', handleTouchEnd);
-    zr.on('touchcancel', handleTouchCancel);
+    zr.on('touchstart', handlePointerActivate);
+    zr.on('touchmove', handlePointerMove);
+    zr.on('touchend', handlePointerEnd);
+    zr.on('touchcancel', handlePointerCancel);
+
+    zr.on('pointerdown', handlePointerActivate);
+    zr.on('pointermove', handlePointerMove);
+    zr.on('pointerup', handlePointerEnd);
+    zr.on('pointercancel', handlePointerCancel);
+
+    zr.on('mousedown', handlePointerActivate);
+    zr.on('mousemove', handlePointerMove);
+    zr.on('mouseup', handlePointerEnd);
+
     zr.on('globalout', handleGlobalOut);
 
 
@@ -224,10 +271,22 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     return () => {
       window.removeEventListener('resize', resizeChart);
 
-      zr.off('touchstart', handleTouchStart);
-      zr.off('touchmove', handleTouchMove);
-      zr.off('touchend', handleTouchEnd);
-      zr.off('touchcancel', handleTouchCancel);
+
+      zr.off('touchstart', handlePointerActivate);
+      zr.off('touchmove', handlePointerMove);
+      zr.off('touchend', handlePointerEnd);
+      zr.off('touchcancel', handlePointerCancel);
+
+      zr.off('pointerdown', handlePointerActivate);
+      zr.off('pointermove', handlePointerMove);
+      zr.off('pointerup', handlePointerEnd);
+      zr.off('pointercancel', handlePointerCancel);
+
+      zr.off('mousedown', handlePointerActivate);
+      zr.off('mousemove', handlePointerMove);
+      zr.off('mouseup', handlePointerEnd);
+
+
       zr.off('globalout', handleGlobalOut);
 
       clearHideTooltipTimeout();
