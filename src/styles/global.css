@@ -222,6 +222,17 @@ footer {
   line-height: 1.6;
 }
 
+footer a {
+  color: #00a0d0;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+footer a:hover,
+footer a:focus-visible {
+  color: #4dd8ff;
+}
+
 @media (min-width: 640px) {
   :root {
     --page-padding-x: 80px;

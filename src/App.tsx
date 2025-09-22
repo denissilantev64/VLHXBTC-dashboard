@@ -88,7 +88,30 @@ export function App(): JSX.Element {
         <CardsSection stats={stats} translation={translation} locale={locale} />
         <ChartsSection data={filteredData} translation={translation} locale={locale} range={range} />
       </main>
-      <footer>{translation.footer}</footer>
+      <footer>
+        <p>
+          {translation.footer.blockchainNotice}{' '}
+          {translation.footer.vlhx.prefix}
+          <a
+            href={translation.footer.vlhx.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {translation.footer.vlhx.linkLabel}
+          </a>
+          {translation.footer.vlhx.suffix}{' '}
+          {translation.footer.wbtc.prefix}
+          {translation.footer.wbtc.sources.map((source, index) => (
+            <span key={source.url}>
+              {index > 0 ? translation.footer.wbtc.separator : null}
+              <a href={source.url} target="_blank" rel="noopener noreferrer">
+                {source.label}
+              </a>
+            </span>
+          ))}
+          {translation.footer.wbtc.suffix}
+        </p>
+      </footer>
     </div>
   );
 }
