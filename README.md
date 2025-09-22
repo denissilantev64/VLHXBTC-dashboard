@@ -52,16 +52,15 @@ By default the exporter uses the public Arbitrum RPC. Override or add fallbacks 
 ```bash
 export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
 export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
-export GITHUB_PAGES_BASE="/VLHXBTC-dashboard/" # optional for local parity with GitHub Pages
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints. The deploy workflow automatically injects `GITHUB_PAGES_BASE` so static assets resolve correctly on Pages.
+Create a `.env` or add these variables in GitHub Secrets to use premium endpoints.
 
 ## GitHub Actions
 
 One workflow lives under `.github/workflows/`:
 
-- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes the collectors via `npm run daily`, builds the static dashboard with the GitHub Pages base path, and uploads the `dist/` artifact for deployment.
+- `deploy.yml` — runs on every push to `main` and once per day at 23:00 UTC. It installs dependencies, executes the collectors via `npm run daily`, builds the static dashboard, and uploads the `dist/` artifact for deployment.
 
 
 ### Publishing to GitHub Pages
@@ -87,7 +86,7 @@ npm run build
 npm run preview
 ```
 
-The dashboard loads CSVs from the repository using relative URLs, so it works automatically on GitHub Pages under a sub-path configured via `import.meta.env.BASE_URL`.
+The dashboard loads CSVs from the repository using relative URLs, so it works automatically on GitHub Pages under a sub-path configured via `import.meta.env.BASE_URL`. The Vite configuration defaults the base path to `./`, keeping asset requests relative for both GitHub Pages and custom domains without extra environment variables.
 
 ### Chart Controls & Cards
 
