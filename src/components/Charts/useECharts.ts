@@ -36,35 +36,129 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
+
+    const toFiniteNumber = (value: unknown): number | null => {
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+      }
+      if (typeof value === 'string') {
+        if (value.trim() === '') {
+          return null;
+        }
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+        const parsedDate = Date.parse(value);
+        return Number.isFinite(parsedDate) ? parsedDate : null;
+      }
+      return null;
+    };
+
+    type ExtractedPoint = { x: number | null; y: number | null };
+    const ensurePoint = (input: unknown, point: ExtractedPoint): void => {
+      if (input == null) {
+        return;
+      }
+
+      if (Array.isArray(input)) {
+        if (input.length >= 2) {
+          const maybeX = toFiniteNumber(input[0]);
+          const maybeY = toFiniteNumber(input[input.length - 1]);
+          if (maybeX !== null && point.x === null) {
+            point.x = maybeX;
+          }
+          if (maybeY !== null && point.y === null) {
+            point.y = maybeY;
+          }
+        } else if (input.length === 1 && point.y === null) {
+          const maybeY = toFiniteNumber(input[0]);
+          if (maybeY !== null) {
+            point.y = maybeY;
+          }
+        }
+        return;
+      }
+
+      if (typeof input === 'object') {
+        const record = input as Record<string, unknown>;
+        if ('coord' in record) {
+          ensurePoint(record['coord'], point);
+        }
+        if ('value' in record) {
+          ensurePoint(record['value'], point);
+        }
+        if ('x' in record && record['x'] !== undefined && point.x === null) {
+          const maybeX = toFiniteNumber(record['x']);
+          if (maybeX !== null) {
+            point.x = maybeX;
+          }
+        }
+        if ('y' in record && record['y'] !== undefined && point.y === null) {
+          const maybeY = toFiniteNumber(record['y']);
+          if (maybeY !== null) {
+            point.y = maybeY;
+          }
+        }
+        return;
+      }
+
+      if (point.y === null) {
+        const maybeY = toFiniteNumber(input);
+        if (maybeY !== null) {
+          point.y = maybeY;
+        }
+      }
+    };
+
+    const resolveDataPoint = (entry: unknown): { seriesIndex: number | null; point: ExtractedPoint } => {
+      const result: ExtractedPoint = { x: null, y: null };
+      if (!entry || typeof entry !== 'object') {
+        return { seriesIndex: null, point: result };
+      }
+
+      const candidate = entry as Record<string, unknown>;
+      const rawSeriesIndex = candidate['seriesIndex'];
+      const seriesIndex = typeof rawSeriesIndex === 'number' ? rawSeriesIndex : null;
+
+      ensurePoint(candidate['value'], result);
+      ensurePoint(candidate['data'], result);
+
+      if (result.x === null && 'axisValue' in candidate) {
+        const maybeX = toFiniteNumber(candidate['axisValue']);
+        if (maybeX !== null) {
+          result.x = maybeX;
+        }
+      }
+
+      if (result.y === null && 'axisValue' in candidate) {
+        const axisDim = typeof candidate['axisDim'] === 'string' ? candidate['axisDim'] : null;
+        if (axisDim === 'y') {
+          const maybeY = toFiniteNumber(candidate['axisValue']);
+          if (maybeY !== null) {
+            result.y = maybeY;
+          }
+        }
+      }
+
+      return { seriesIndex, point: result };
+    };
+
+
     let anchorPointX: number | null = null;
     let anchorPointY: number | null = null;
     const chart = getChart();
     if (chart) {
       const paramsList = Array.isArray(params) ? params : params ? [params] : [];
       for (const entry of paramsList) {
-        if (!entry || typeof entry !== 'object') {
+
+        const { seriesIndex, point: extracted } = resolveDataPoint(entry);
+        if (seriesIndex === null || extracted.x === null || extracted.y === null) {
           continue;
         }
 
-        const candidate = entry as { seriesIndex?: unknown; value?: unknown; data?: unknown };
-        const seriesIndex = typeof candidate.seriesIndex === 'number' ? candidate.seriesIndex : null;
-        if (seriesIndex === null) {
-          continue;
-        }
+        const pixelPoint = chart.convertToPixel({ seriesIndex }, [extracted.x, extracted.y]);
 
-        const rawValue = candidate.value ?? candidate.data;
-        if (!Array.isArray(rawValue) || rawValue.length < 2) {
-          continue;
-        }
-
-        const dataPoint = rawValue as [unknown, unknown];
-        const x = typeof dataPoint[0] === 'number' ? dataPoint[0] : Number(dataPoint[0]);
-        const y = typeof dataPoint[1] === 'number' ? dataPoint[1] : Number(dataPoint[1]);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          continue;
-        }
-
-        const pixelPoint = chart.convertToPixel({ seriesIndex }, [x, y]);
         if (!Array.isArray(pixelPoint) || pixelPoint.length < 2) {
           continue;
         }
