@@ -7,6 +7,94 @@ type TooltipConfig = Exclude<EChartsOption['tooltip'], undefined>;
 type TooltipItem = TooltipConfig extends Array<infer Item> ? Item : TooltipConfig;
 type TooltipPoint = [number, number];
 
+type ExtractedPoint = { x: number | null; y: number | null };
+
+type TooltipAnchor =
+  | { type: 'pixel'; point: TooltipPoint }
+  | { type: 'indices'; seriesIndex: number; dataIndex: number };
+
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    if (value.trim() === '') {
+      return null;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+    const parsedDate = Date.parse(value);
+    return Number.isFinite(parsedDate) ? parsedDate : null;
+  }
+  return null;
+};
+
+const populatePointFromInput = (input: unknown, point: ExtractedPoint): void => {
+  if (input == null) {
+    return;
+  }
+
+  if (Array.isArray(input)) {
+    if (input.length >= 2) {
+      const maybeX = toFiniteNumber(input[0]);
+      const maybeY = toFiniteNumber(input[input.length - 1]);
+      if (maybeX !== null && point.x === null) {
+        point.x = maybeX;
+      }
+      if (maybeY !== null && point.y === null) {
+        point.y = maybeY;
+      }
+    } else if (input.length === 1 && point.y === null) {
+      const maybeY = toFiniteNumber(input[0]);
+      if (maybeY !== null) {
+        point.y = maybeY;
+      }
+    }
+    return;
+  }
+
+  if (typeof input === 'object') {
+    const record = input as Record<string, unknown>;
+    if ('coord' in record) {
+      populatePointFromInput(record['coord'], point);
+    }
+    if ('value' in record) {
+      populatePointFromInput(record['value'], point);
+    }
+    if ('data' in record) {
+      populatePointFromInput(record['data'], point);
+    }
+    if ('x' in record && record['x'] !== undefined && point.x === null) {
+      const maybeX = toFiniteNumber(record['x']);
+      if (maybeX !== null) {
+        point.x = maybeX;
+      }
+    }
+    if ('y' in record && record['y'] !== undefined && point.y === null) {
+      const maybeY = toFiniteNumber(record['y']);
+      if (maybeY !== null) {
+        point.y = maybeY;
+      }
+    }
+    return;
+  }
+
+  if (point.y === null) {
+    const maybeY = toFiniteNumber(input);
+    if (maybeY !== null) {
+      point.y = maybeY;
+    }
+  }
+};
+
+const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
+  const result: ExtractedPoint = { x: null, y: null };
+  populatePointFromInput(entry, result);
+  return result;
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -19,6 +107,7 @@ function createTooltipPositioner(
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
   getChart: () => EChartsType | null,
+  getTooltipAnchor: () => TooltipAnchor | null,
 ): TooltipPositioner {
   return ((point, params, _dom, _rect, size) => {
     const effectivePoint = getCurrentPoint() ?? point;
@@ -36,82 +125,45 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
-    const toFiniteNumber = (value: unknown): number | null => {
-      if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : null;
-      }
-      if (typeof value === 'string') {
-        if (value.trim() === '') {
-          return null;
-        }
-        const numeric = Number(value);
-        if (Number.isFinite(numeric)) {
-          return numeric;
-        }
-        const parsedDate = Date.parse(value);
-        return Number.isFinite(parsedDate) ? parsedDate : null;
-      }
-      return null;
-    };
+    const chart = getChart();
+    const anchor = getTooltipAnchor();
+    let anchorPixel: TooltipPoint | null = null;
 
-    type ExtractedPoint = { x: number | null; y: number | null };
-    const ensurePoint = (input: unknown, point: ExtractedPoint): void => {
-      if (input == null) {
-        return;
-      }
+    if (anchor) {
+      if (anchor.type === 'pixel') {
+        anchorPixel = anchor.point;
+      } else if (anchor.type === 'indices' && chart) {
+        const option = chart.getOption();
+        const rawSeriesList = Array.isArray(option.series)
+          ? option.series
+          : option.series != null
+            ? [option.series]
+            : [];
 
-      if (Array.isArray(input)) {
-        if (input.length >= 2) {
-          const maybeX = toFiniteNumber(input[0]);
-          const maybeY = toFiniteNumber(input[input.length - 1]);
-          if (maybeX !== null && point.x === null) {
-            point.x = maybeX;
+        const series = rawSeriesList[anchor.seriesIndex];
+        if (series && typeof series === 'object') {
+          const data = (series as { data?: unknown }).data;
+          if (Array.isArray(data) && anchor.dataIndex >= 0 && anchor.dataIndex < data.length) {
+            const coordinates = extractPointFromEntry(data[anchor.dataIndex]);
+            if (coordinates.x !== null && coordinates.y !== null) {
+              const converted = chart.convertToPixel(
+                { seriesIndex: anchor.seriesIndex },
+                [coordinates.x, coordinates.y],
+              );
+              if (Array.isArray(converted) && converted.length >= 2) {
+                const [pixelX, pixelY] = converted;
+                if (Number.isFinite(pixelX) && Number.isFinite(pixelY)) {
+                  anchorPixel = [pixelX, pixelY];
+                }
+              }
+            }
           }
-          if (maybeY !== null && point.y === null) {
-            point.y = maybeY;
-          }
-        } else if (input.length === 1 && point.y === null) {
-          const maybeY = toFiniteNumber(input[0]);
-          if (maybeY !== null) {
-            point.y = maybeY;
-          }
-        }
-        return;
-      }
-
-      if (typeof input === 'object') {
-        const record = input as Record<string, unknown>;
-        if ('coord' in record) {
-          ensurePoint(record['coord'], point);
-        }
-        if ('value' in record) {
-          ensurePoint(record['value'], point);
-        }
-        if ('x' in record && record['x'] !== undefined && point.x === null) {
-          const maybeX = toFiniteNumber(record['x']);
-          if (maybeX !== null) {
-            point.x = maybeX;
-          }
-        }
-        if ('y' in record && record['y'] !== undefined && point.y === null) {
-          const maybeY = toFiniteNumber(record['y']);
-          if (maybeY !== null) {
-            point.y = maybeY;
-          }
-        }
-        return;
-      }
-
-      if (point.y === null) {
-        const maybeY = toFiniteNumber(input);
-        if (maybeY !== null) {
-          point.y = maybeY;
         }
       }
-    };
+    }
 
     const resolveDataPoint = (entry: unknown): { seriesIndex: number | null; point: ExtractedPoint } => {
-      const result: ExtractedPoint = { x: null, y: null };
+      const result = extractPointFromEntry(entry);
       if (!entry || typeof entry !== 'object') {
         return { seriesIndex: null, point: result };
       }
@@ -119,9 +171,6 @@ function createTooltipPositioner(
       const candidate = entry as Record<string, unknown>;
       const rawSeriesIndex = candidate['seriesIndex'];
       const seriesIndex = typeof rawSeriesIndex === 'number' ? rawSeriesIndex : null;
-
-      ensurePoint(candidate['value'], result);
-      ensurePoint(candidate['data'], result);
 
       if (result.x === null && 'axisValue' in candidate) {
         const maybeX = toFiniteNumber(candidate['axisValue']);
@@ -145,8 +194,7 @@ function createTooltipPositioner(
 
     let anchorPointX: number | null = null;
     let anchorPointY: number | null = null;
-    const chart = getChart();
-    if (chart) {
+    if (!anchorPixel && chart) {
       const paramsList = Array.isArray(params) ? params : params ? [params] : [];
       for (const entry of paramsList) {
         const { seriesIndex, point: extracted } = resolveDataPoint(entry);
@@ -165,10 +213,15 @@ function createTooltipPositioner(
           continue;
         }
 
-        anchorPointX = chartLeft + pixelX;
-        anchorPointY = chartTop + pixelY;
+        anchorPixel = [pixelX, pixelY];
         break;
       }
+    }
+
+    if (anchorPixel) {
+      const [pixelX, pixelY] = anchorPixel;
+      anchorPointX = chartLeft + pixelX;
+      anchorPointY = chartTop + pixelY;
     }
 
     const referenceX = anchorPointX ?? chartLeft + effectivePoint[0];
@@ -230,8 +283,14 @@ function enrichTooltipOption(
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
   getChart: () => EChartsType | null,
+  getTooltipAnchor: () => TooltipAnchor | null,
 ): TooltipConfig {
-  const positioner = createTooltipPositioner(getContainer, getCurrentPoint, getChart);
+  const positioner = createTooltipPositioner(
+    getContainer,
+    getCurrentPoint,
+    getChart,
+    getTooltipAnchor,
+  );
 
   const enhance = (input?: TooltipItem): TooltipItem => {
     const base = { ...(input ?? {}) } as TooltipItem & Record<string, unknown>;
@@ -271,6 +330,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const observedElementsRef = useRef<HTMLElement[]>([]);
   const hideTooltipTimeoutRef = useRef<number | null>(null);
   const lastTooltipPointRef = useRef<TooltipPoint | null>(null);
+  const lastTooltipAnchorRef = useRef<TooltipAnchor | null>(null);
 
 
   useEffect(() => {
@@ -367,19 +427,6 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       const constrainedPoint: TooltipPoint = [clampedX, clampedY];
       lastTooltipPointRef.current = constrainedPoint;
 
-      const toFiniteNumber = (value: unknown): number | null => {
-        if (typeof value === 'number' && Number.isFinite(value)) {
-          return value;
-        }
-        if (typeof value === 'string') {
-          const numeric = Number(value);
-          if (Number.isFinite(numeric)) {
-            return numeric;
-          }
-        }
-        return null;
-      };
-
       const extractTimestamp = (entry: unknown): number | null => {
         if (entry == null) {
           return null;
@@ -475,6 +522,42 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       }
 
       if (matchedSeriesIndex !== null && matchedDataIndex !== null) {
+        let anchorStored = false;
+        const option = chart.getOption();
+        const rawSeriesList = Array.isArray(option.series)
+          ? option.series
+          : option.series != null
+            ? [option.series]
+            : [];
+
+        const series = rawSeriesList[matchedSeriesIndex];
+        if (series && typeof series === 'object') {
+          const data = (series as { data?: unknown }).data;
+          if (Array.isArray(data) && matchedDataIndex >= 0 && matchedDataIndex < data.length) {
+            const coordinates = extractPointFromEntry(data[matchedDataIndex]);
+            if (coordinates.x !== null && coordinates.y !== null) {
+              const pixelPoint = chart.convertToPixel(
+                { seriesIndex: matchedSeriesIndex },
+                [coordinates.x, coordinates.y],
+              );
+              if (Array.isArray(pixelPoint) && pixelPoint.length >= 2) {
+                const [pixelX, pixelY] = pixelPoint;
+                if (Number.isFinite(pixelX) && Number.isFinite(pixelY)) {
+                  lastTooltipAnchorRef.current = {
+                    type: 'pixel',
+                    point: [pixelX, pixelY],
+                  };
+                  anchorStored = true;
+                }
+              }
+            }
+          }
+        }
+
+        if (!anchorStored) {
+          lastTooltipAnchorRef.current = null;
+        }
+
         chart.dispatchAction({
           type: 'updateAxisPointer',
           seriesIndex: matchedSeriesIndex,
@@ -486,6 +569,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
           dataIndex: matchedDataIndex,
         });
       } else {
+        lastTooltipAnchorRef.current = null;
         chart.dispatchAction({ type: 'updateAxisPointer', x: clampedX, y: clampedY });
         chart.dispatchAction({ type: 'showTip', x: clampedX, y: clampedY });
       }
@@ -494,6 +578,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const hideTooltip = () => {
       clearHideTooltipTimeout();
       lastTooltipPointRef.current = null;
+      lastTooltipAnchorRef.current = null;
       chart.dispatchAction({ type: 'hideTip' });
     };
 
@@ -633,6 +718,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       () => containerRef.current,
       () => lastTooltipPointRef.current,
       () => chartRef.current,
+      () => lastTooltipAnchorRef.current,
     );
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
