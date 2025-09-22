@@ -18,8 +18,9 @@ type TooltipPositioner = (
 function createTooltipPositioner(
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
+  getChart: () => EChartsType | null,
 ): TooltipPositioner {
-  return ((point, _params, _dom, _rect, size) => {
+  return ((point, params, _dom, _rect, size) => {
     const effectivePoint = getCurrentPoint() ?? point;
 
     const container = getContainer();
@@ -35,7 +36,53 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
-    let left = chartLeft + effectivePoint[0] - tooltipWidth / 2;
+    let anchorPointX: number | null = null;
+    let anchorPointY: number | null = null;
+    const chart = getChart();
+    if (chart) {
+      const paramsList = Array.isArray(params) ? params : params ? [params] : [];
+      for (const entry of paramsList) {
+        if (!entry || typeof entry !== 'object') {
+          continue;
+        }
+
+        const candidate = entry as { seriesIndex?: unknown; value?: unknown; data?: unknown };
+        const seriesIndex = typeof candidate.seriesIndex === 'number' ? candidate.seriesIndex : null;
+        if (seriesIndex === null) {
+          continue;
+        }
+
+        const rawValue = candidate.value ?? candidate.data;
+        if (!Array.isArray(rawValue) || rawValue.length < 2) {
+          continue;
+        }
+
+        const dataPoint = rawValue as [unknown, unknown];
+        const x = typeof dataPoint[0] === 'number' ? dataPoint[0] : Number(dataPoint[0]);
+        const y = typeof dataPoint[1] === 'number' ? dataPoint[1] : Number(dataPoint[1]);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          continue;
+        }
+
+        const pixelPoint = chart.convertToPixel({ seriesIndex }, [x, y]);
+        if (!Array.isArray(pixelPoint) || pixelPoint.length < 2) {
+          continue;
+        }
+
+        const pixelX = pixelPoint[0];
+        const pixelY = pixelPoint[1];
+        if (!Number.isFinite(pixelX) || !Number.isFinite(pixelY)) {
+          continue;
+        }
+
+        anchorPointX = chartLeft + pixelX;
+        anchorPointY = chartTop + pixelY;
+        break;
+      }
+    }
+
+    const referenceX = anchorPointX ?? chartLeft + effectivePoint[0];
+    let left = referenceX - tooltipWidth / 2;
     const minLeft = chartLeft + 8;
     const maxLeft = chartRight - tooltipWidth - 8;
     if (left < minLeft) {
@@ -46,16 +93,16 @@ function createTooltipPositioner(
 
     const minTop = chartTop + 8;
     const maxTop = chartBottom - tooltipHeight - 8;
-    const pointerY = chartTop + effectivePoint[1];
+    const referenceY = anchorPointY ?? chartTop + effectivePoint[1];
     const gap = 16;
 
-    const spaceAbove = pointerY - chartTop - tooltipHeight - gap;
-    const spaceBelow = chartBottom - pointerY - tooltipHeight - gap;
+    const spaceAbove = referenceY - chartTop - tooltipHeight - gap;
+    const spaceBelow = chartBottom - referenceY - tooltipHeight - gap;
 
-    let top = pointerY - tooltipHeight - gap;
+    let top = referenceY - tooltipHeight - gap;
 
     if (spaceAbove < 0) {
-      const belowPointerTop = pointerY + gap;
+      const belowPointerTop = referenceY + gap;
       const lackBelow = Math.max(0, -spaceBelow);
 
       top = belowPointerTop - lackBelow;
@@ -81,8 +128,9 @@ function enrichTooltipOption(
   tooltip: EChartsOption['tooltip'],
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
+  getChart: () => EChartsType | null,
 ): TooltipConfig {
-  const positioner = createTooltipPositioner(getContainer, getCurrentPoint);
+  const positioner = createTooltipPositioner(getContainer, getCurrentPoint, getChart);
 
   const enhance = (input?: TooltipItem): TooltipItem => {
     const base = { ...(input ?? {}) } as TooltipItem & Record<string, unknown>;
@@ -358,6 +406,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       option.tooltip,
       () => containerRef.current,
       () => lastTooltipPointRef.current,
+      () => chartRef.current,
     );
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
