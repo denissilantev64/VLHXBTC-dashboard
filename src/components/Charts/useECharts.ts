@@ -18,8 +18,9 @@ type TooltipPositioner = (
 function createTooltipPositioner(
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
+  getChart: () => EChartsType | null,
 ): TooltipPositioner {
-  return ((point, _params, _dom, _rect, size) => {
+  return ((point, params, _dom, _rect, size) => {
     const effectivePoint = getCurrentPoint() ?? point;
 
     const container = getContainer();
@@ -35,7 +36,143 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
-    let left = chartLeft + effectivePoint[0] - tooltipWidth / 2;
+    const toFiniteNumber = (value: unknown): number | null => {
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+      }
+      if (typeof value === 'string') {
+        if (value.trim() === '') {
+          return null;
+        }
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+        const parsedDate = Date.parse(value);
+        return Number.isFinite(parsedDate) ? parsedDate : null;
+      }
+      return null;
+    };
+
+    type ExtractedPoint = { x: number | null; y: number | null };
+    const ensurePoint = (input: unknown, point: ExtractedPoint): void => {
+      if (input == null) {
+        return;
+      }
+
+      if (Array.isArray(input)) {
+        if (input.length >= 2) {
+          const maybeX = toFiniteNumber(input[0]);
+          const maybeY = toFiniteNumber(input[input.length - 1]);
+          if (maybeX !== null && point.x === null) {
+            point.x = maybeX;
+          }
+          if (maybeY !== null && point.y === null) {
+            point.y = maybeY;
+          }
+        } else if (input.length === 1 && point.y === null) {
+          const maybeY = toFiniteNumber(input[0]);
+          if (maybeY !== null) {
+            point.y = maybeY;
+          }
+        }
+        return;
+      }
+
+      if (typeof input === 'object') {
+        const record = input as Record<string, unknown>;
+        if ('coord' in record) {
+          ensurePoint(record['coord'], point);
+        }
+        if ('value' in record) {
+          ensurePoint(record['value'], point);
+        }
+        if ('x' in record && record['x'] !== undefined && point.x === null) {
+          const maybeX = toFiniteNumber(record['x']);
+          if (maybeX !== null) {
+            point.x = maybeX;
+          }
+        }
+        if ('y' in record && record['y'] !== undefined && point.y === null) {
+          const maybeY = toFiniteNumber(record['y']);
+          if (maybeY !== null) {
+            point.y = maybeY;
+          }
+        }
+        return;
+      }
+
+      if (point.y === null) {
+        const maybeY = toFiniteNumber(input);
+        if (maybeY !== null) {
+          point.y = maybeY;
+        }
+      }
+    };
+
+    const resolveDataPoint = (entry: unknown): { seriesIndex: number | null; point: ExtractedPoint } => {
+      const result: ExtractedPoint = { x: null, y: null };
+      if (!entry || typeof entry !== 'object') {
+        return { seriesIndex: null, point: result };
+      }
+
+      const candidate = entry as Record<string, unknown>;
+      const rawSeriesIndex = candidate['seriesIndex'];
+      const seriesIndex = typeof rawSeriesIndex === 'number' ? rawSeriesIndex : null;
+
+      ensurePoint(candidate['value'], result);
+      ensurePoint(candidate['data'], result);
+
+      if (result.x === null && 'axisValue' in candidate) {
+        const maybeX = toFiniteNumber(candidate['axisValue']);
+        if (maybeX !== null) {
+          result.x = maybeX;
+        }
+      }
+
+      if (result.y === null && 'axisValue' in candidate) {
+        const axisDim = typeof candidate['axisDim'] === 'string' ? candidate['axisDim'] : null;
+        if (axisDim === 'y') {
+          const maybeY = toFiniteNumber(candidate['axisValue']);
+          if (maybeY !== null) {
+            result.y = maybeY;
+          }
+        }
+      }
+
+      return { seriesIndex, point: result };
+    };
+
+    let anchorPointX: number | null = null;
+    let anchorPointY: number | null = null;
+    const chart = getChart();
+    if (chart) {
+      const paramsList = Array.isArray(params) ? params : params ? [params] : [];
+      for (const entry of paramsList) {
+        const { seriesIndex, point: extracted } = resolveDataPoint(entry);
+        if (seriesIndex === null || extracted.x === null || extracted.y === null) {
+          continue;
+        }
+
+        const pixelPoint = chart.convertToPixel({ seriesIndex }, [extracted.x, extracted.y]);
+        if (!Array.isArray(pixelPoint) || pixelPoint.length < 2) {
+          continue;
+        }
+
+        const pixelX = pixelPoint[0];
+        const pixelY = pixelPoint[1];
+        if (!Number.isFinite(pixelX) || !Number.isFinite(pixelY)) {
+          continue;
+        }
+
+        anchorPointX = chartLeft + pixelX;
+        anchorPointY = chartTop + pixelY;
+        break;
+      }
+    }
+
+    const referenceX = anchorPointX ?? chartLeft + effectivePoint[0];
+    let left = referenceX - tooltipWidth / 2;
     const minLeft = chartLeft + 8;
     const maxLeft = chartRight - tooltipWidth - 8;
     if (left < minLeft) {
@@ -46,16 +183,16 @@ function createTooltipPositioner(
 
     const minTop = chartTop + 8;
     const maxTop = chartBottom - tooltipHeight - 8;
-    const pointerY = chartTop + effectivePoint[1];
+    const referenceY = anchorPointY ?? chartTop + effectivePoint[1];
     const gap = 16;
 
-    const spaceAbove = pointerY - chartTop - tooltipHeight - gap;
-    const spaceBelow = chartBottom - pointerY - tooltipHeight - gap;
+    const spaceAbove = referenceY - chartTop - tooltipHeight - gap;
+    const spaceBelow = chartBottom - referenceY - tooltipHeight - gap;
 
-    let top = pointerY - tooltipHeight - gap;
+    let top = referenceY - tooltipHeight - gap;
 
     if (spaceAbove < 0) {
-      const belowPointerTop = pointerY + gap;
+      const belowPointerTop = referenceY + gap;
       const lackBelow = Math.max(0, -spaceBelow);
 
       top = belowPointerTop - lackBelow;
@@ -81,8 +218,9 @@ function enrichTooltipOption(
   tooltip: EChartsOption['tooltip'],
   getContainer: () => HTMLElement | null,
   getCurrentPoint: () => TooltipPoint | null,
+  getChart: () => EChartsType | null,
 ): TooltipConfig {
-  const positioner = createTooltipPositioner(getContainer, getCurrentPoint);
+  const positioner = createTooltipPositioner(getContainer, getCurrentPoint, getChart);
 
   const enhance = (input?: TooltipItem): TooltipItem => {
     const base = { ...(input ?? {}) } as TooltipItem & Record<string, unknown>;
@@ -358,6 +496,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       option.tooltip,
       () => containerRef.current,
       () => lastTooltipPointRef.current,
+      () => chartRef.current,
     );
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
