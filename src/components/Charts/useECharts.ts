@@ -94,6 +94,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const chartRef = useRef<EChartsType | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const observedElementsRef = useRef<HTMLElement[]>([]);
+  const hideTooltipTimeoutRef = useRef<number | null>(null);
 
 
   useEffect(() => {
@@ -110,6 +111,138 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     };
 
     window.addEventListener('resize', resizeChart);
+
+    const zr = chart.getZr();
+
+    const isPointerEvent = (
+      event: TouchEvent | MouseEvent | PointerEvent | undefined,
+    ): event is PointerEvent => {
+      if (!event) {
+        return false;
+      }
+      return 'pointerType' in event;
+    };
+
+    const shouldIgnoreEvent = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
+      if (!event) {
+        return false;
+      }
+
+      if ('touches' in event && event.touches.length > 1) {
+        return true;
+      }
+
+      if (isPointerEvent(event) && event.pointerType === 'touch' && event.isPrimary === false) {
+        return true;
+      }
+
+      return false;
+    };
+
+    const getRelativePoint = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
+      if (!event) {
+        return null;
+      }
+
+      if (shouldIgnoreEvent(event)) {
+        return null;
+      }
+
+      const touch =
+        'touches' in event && event.touches.length > 0
+          ? event.touches[0]
+          : 'changedTouches' in event && event.changedTouches.length > 0
+            ? event.changedTouches[0]
+            : null;
+
+      const pointSource = touch ?? (('clientX' in event && 'clientY' in event) ? event : null);
+      if (!pointSource) {
+        return null;
+      }
+
+      const bounds = element.getBoundingClientRect();
+      return {
+        x: pointSource.clientX - bounds.left,
+        y: pointSource.clientY - bounds.top,
+      };
+    };
+
+    const clearHideTooltipTimeout = () => {
+      if (hideTooltipTimeoutRef.current !== null) {
+        window.clearTimeout(hideTooltipTimeoutRef.current);
+        hideTooltipTimeoutRef.current = null;
+      }
+    };
+
+    const showTooltip = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
+      clearHideTooltipTimeout();
+      const point = getRelativePoint(event);
+      if (!point) {
+        return;
+      }
+
+      chart.dispatchAction({ type: 'showTip', x: point.x, y: point.y });
+    };
+
+    const hideTooltip = () => {
+      clearHideTooltipTimeout();
+      chart.dispatchAction({ type: 'hideTip' });
+    };
+
+    const scheduleHideTooltip = () => {
+      clearHideTooltipTimeout();
+      hideTooltipTimeoutRef.current = window.setTimeout(() => {
+        hideTooltip();
+      }, 1200);
+    };
+
+    const handlePointerActivate = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (shouldIgnoreEvent(params.event)) {
+        return;
+      }
+      showTooltip(params.event);
+    };
+
+    const handlePointerMove = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (shouldIgnoreEvent(params.event)) {
+        return;
+      }
+      showTooltip(params.event);
+    };
+
+    const handlePointerEnd = (params?: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (params && shouldIgnoreEvent(params.event)) {
+        return;
+      }
+      scheduleHideTooltip();
+    };
+
+    const handlePointerCancel = (params?: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
+      if (params && shouldIgnoreEvent(params.event)) {
+        return;
+      }
+      scheduleHideTooltip();
+    };
+
+    const handleGlobalOut = () => {
+      hideTooltip();
+    };
+
+    zr.on('touchstart', handlePointerActivate);
+    zr.on('touchmove', handlePointerMove);
+    zr.on('touchend', handlePointerEnd);
+    zr.on('touchcancel', handlePointerCancel);
+
+    zr.on('pointerdown', handlePointerActivate);
+    zr.on('pointermove', handlePointerMove);
+    zr.on('pointerup', handlePointerEnd);
+    zr.on('pointercancel', handlePointerCancel);
+
+    zr.on('mousedown', handlePointerActivate);
+    zr.on('mousemove', handlePointerMove);
+    zr.on('mouseup', handlePointerEnd);
+
+    zr.on('globalout', handleGlobalOut);
 
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(() => {
@@ -134,6 +267,24 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
     return () => {
       window.removeEventListener('resize', resizeChart);
+
+      zr.off('touchstart', handlePointerActivate);
+      zr.off('touchmove', handlePointerMove);
+      zr.off('touchend', handlePointerEnd);
+      zr.off('touchcancel', handlePointerCancel);
+
+      zr.off('pointerdown', handlePointerActivate);
+      zr.off('pointermove', handlePointerMove);
+      zr.off('pointerup', handlePointerEnd);
+      zr.off('pointercancel', handlePointerCancel);
+
+      zr.off('mousedown', handlePointerActivate);
+      zr.off('mousemove', handlePointerMove);
+      zr.off('mouseup', handlePointerEnd);
+
+      zr.off('globalout', handleGlobalOut);
+
+      clearHideTooltipTimeout();
 
       const observer = resizeObserverRef.current;
       if (observer) {
