@@ -26,6 +26,10 @@ export const translations = {
         separator: ' и ',
         suffix: ' (резервный источник).',
       },
+      lastUpdate: {
+        label: 'Последнее обновление данных:',
+        unavailable: 'нет данных',
+      },
     },
     cta: 'Начать инвестировать',
     filters: {
@@ -95,6 +99,10 @@ export const translations = {
         ],
         separator: ' with ',
         suffix: ' as the fallback provider.',
+      },
+      lastUpdate: {
+        label: 'Last data update:',
+        unavailable: 'not available',
       },
     },
     cta: 'Start investing',

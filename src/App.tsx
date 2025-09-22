@@ -59,6 +59,16 @@ export function App(): JSX.Element {
   const availableRanges = useMemo(() => getAvailableRanges(data), [data]);
   const filteredData = useMemo(() => filterByRange(range, data), [range, data]);
   const stats = useMemo(() => computeDashboardStats(filteredData), [filteredData]);
+  const lastUpdatedEntry = data.length > 0 ? data[data.length - 1] : undefined;
+  const lastUpdatedDate = lastUpdatedEntry?.date;
+  const lastUpdatedIso = lastUpdatedDate?.toISOString();
+  const lastUpdatedLabel = lastUpdatedDate
+    ? new Intl.DateTimeFormat(locale, {
+        dateStyle: 'long',
+        timeStyle: 'short',
+        timeZone: 'UTC',
+      }).format(lastUpdatedDate)
+    : translation.footer.lastUpdate.unavailable;
 
   const handleToggleLanguage = () => {
     setLanguage((prev) => (prev === 'ru' ? 'en' : 'ru'));
@@ -110,6 +120,14 @@ export function App(): JSX.Element {
             </span>
           ))}
           {translation.footer.wbtc.suffix}
+        </p>
+        <p>
+          {translation.footer.lastUpdate.label}{' '}
+          {lastUpdatedDate ? (
+            <time dateTime={lastUpdatedIso}>{lastUpdatedLabel}</time>
+          ) : (
+            translation.footer.lastUpdate.unavailable
+          )}
         </p>
       </footer>
     </div>
