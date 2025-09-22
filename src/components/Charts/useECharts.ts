@@ -331,6 +331,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
   const hideTooltipTimeoutRef = useRef<number | null>(null);
   const lastTooltipPointRef = useRef<TooltipPoint | null>(null);
   const lastTooltipAnchorRef = useRef<TooltipAnchor | null>(null);
+  const lastInputTypeRef = useRef<'touch' | 'mouse' | null>(null);
 
 
   useEffect(() => {
@@ -374,6 +375,12 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
       return false;
     };
+
+    const isTouchLikeEvent = (
+      event: TouchEvent | MouseEvent | PointerEvent,
+    ): event is TouchEvent => {
+      return 'touches' in event || 'changedTouches' in event;
+    };
     
     const getRelativePoint = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
       if (!event) {
@@ -411,6 +418,35 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       }
     };
 
+    const determineEventInputType = (
+      event: TouchEvent | MouseEvent | PointerEvent | undefined,
+    ): 'touch' | 'mouse' | null => {
+      if (!event) {
+        return null;
+      }
+
+      if (isTouchLikeEvent(event)) {
+        if (event.touches && event.touches.length > 0) {
+          return 'touch';
+        }
+        if (event.changedTouches && event.changedTouches.length > 0) {
+          return 'touch';
+        }
+        return 'touch';
+      }
+
+      if (isPointerEvent(event)) {
+        if (event.pointerType === 'touch') {
+          return 'touch';
+        }
+        if (event.pointerType === 'mouse' || event.pointerType === 'pen') {
+          return 'mouse';
+        }
+      }
+
+      return 'mouse';
+    };
+
     const showTooltip = (event: TouchEvent | MouseEvent | PointerEvent | undefined) => {
       clearHideTooltipTimeout();
       const point = getRelativePoint(event);
@@ -426,6 +462,14 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
       const constrainedPoint: TooltipPoint = [clampedX, clampedY];
       lastTooltipPointRef.current = constrainedPoint;
+
+      const inputType = lastInputTypeRef.current ?? determineEventInputType(event);
+      if (inputType !== 'touch') {
+        lastTooltipAnchorRef.current = null;
+        chart.dispatchAction({ type: 'updateAxisPointer', x: clampedX, y: clampedY });
+        chart.dispatchAction({ type: 'showTip', x: clampedX, y: clampedY });
+        return;
+      }
 
       const extractTimestamp = (entry: unknown): number | null => {
         if (entry == null) {
@@ -522,41 +566,11 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       }
 
       if (matchedSeriesIndex !== null && matchedDataIndex !== null) {
-        let anchorStored = false;
-        const option = chart.getOption();
-        const rawSeriesList = Array.isArray(option.series)
-          ? option.series
-          : option.series != null
-            ? [option.series]
-            : [];
-
-        const series = rawSeriesList[matchedSeriesIndex];
-        if (series && typeof series === 'object') {
-          const data = (series as { data?: unknown }).data;
-          if (Array.isArray(data) && matchedDataIndex >= 0 && matchedDataIndex < data.length) {
-            const coordinates = extractPointFromEntry(data[matchedDataIndex]);
-            if (coordinates.x !== null && coordinates.y !== null) {
-              const pixelPoint = chart.convertToPixel(
-                { seriesIndex: matchedSeriesIndex },
-                [coordinates.x, coordinates.y],
-              );
-              if (Array.isArray(pixelPoint) && pixelPoint.length >= 2) {
-                const [pixelX, pixelY] = pixelPoint;
-                if (Number.isFinite(pixelX) && Number.isFinite(pixelY)) {
-                  lastTooltipAnchorRef.current = {
-                    type: 'pixel',
-                    point: [pixelX, pixelY],
-                  };
-                  anchorStored = true;
-                }
-              }
-            }
-          }
-        }
-
-        if (!anchorStored) {
-          lastTooltipAnchorRef.current = null;
-        }
+        lastTooltipAnchorRef.current = {
+          type: 'indices',
+          seriesIndex: matchedSeriesIndex,
+          dataIndex: matchedDataIndex,
+        };
 
         chart.dispatchAction({
           type: 'updateAxisPointer',
@@ -568,10 +582,14 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
           seriesIndex: matchedSeriesIndex,
           dataIndex: matchedDataIndex,
         });
-      } else {
-        lastTooltipAnchorRef.current = null;
-        chart.dispatchAction({ type: 'updateAxisPointer', x: clampedX, y: clampedY });
-        chart.dispatchAction({ type: 'showTip', x: clampedX, y: clampedY });
+        return;
+      }
+
+      const previousAnchor = lastTooltipAnchorRef.current;
+      if (previousAnchor?.type === 'indices') {
+        const { seriesIndex, dataIndex } = previousAnchor;
+        chart.dispatchAction({ type: 'updateAxisPointer', seriesIndex, dataIndex });
+        chart.dispatchAction({ type: 'showTip', seriesIndex, dataIndex });
       }
     };
 
@@ -579,6 +597,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       clearHideTooltipTimeout();
       lastTooltipPointRef.current = null;
       lastTooltipAnchorRef.current = null;
+      lastInputTypeRef.current = null;
       chart.dispatchAction({ type: 'hideTip' });
     };
 
@@ -593,6 +612,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       if (shouldIgnoreEvent(params.event)) {
         return;
       }
+      lastInputTypeRef.current = determineEventInputType(params.event) ?? lastInputTypeRef.current;
       showTooltip(params.event);
     };
 
@@ -600,6 +620,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       if (shouldIgnoreEvent(params.event)) {
         return;
       }
+      lastInputTypeRef.current = determineEventInputType(params.event) ?? lastInputTypeRef.current;
       showTooltip(params.event);
     };
 
