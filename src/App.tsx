@@ -119,15 +119,15 @@ export function App(): JSX.Element {
               </a>
             </span>
           ))}
-          {translation.footer.wbtc.suffix}
-        </p>
-        <p>
-          {translation.footer.lastUpdate.label}{' '}
-          {lastUpdatedDate ? (
-            <time dateTime={lastUpdatedIso}>{lastUpdatedLabel}</time>
-          ) : (
-            translation.footer.lastUpdate.unavailable
-          )}
+          {translation.footer.wbtc.suffix}{' '}
+          <span>
+            {translation.footer.lastUpdate.label}{' '}
+            {lastUpdatedDate ? (
+              <time dateTime={lastUpdatedIso}>{lastUpdatedLabel}</time>
+            ) : (
+              translation.footer.lastUpdate.unavailable
+            )}
+          </span>
         </p>
       </footer>
     </div>
