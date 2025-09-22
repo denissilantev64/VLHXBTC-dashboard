@@ -141,6 +141,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       };
     };
 
+
     const clearHideTooltipTimeout = () => {
       if (hideTooltipTimeoutRef.current !== null) {
         window.clearTimeout(hideTooltipTimeoutRef.current);
@@ -170,6 +171,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       }, 1200);
     };
 
+
     const handleTouchStart = (params: { event?: TouchEvent | MouseEvent | PointerEvent }) => {
       showTooltip(params.event);
     };
@@ -187,6 +189,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     };
 
     const handleGlobalOut = () => {
+
       hideTooltip();
     };
 
@@ -195,6 +198,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     zr.on('touchend', handleTouchEnd);
     zr.on('touchcancel', handleTouchCancel);
     zr.on('globalout', handleGlobalOut);
+
 
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(() => {
