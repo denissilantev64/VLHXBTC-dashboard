@@ -46,7 +46,7 @@ function createTooltipPositioner(
 
     const minTop = chartTop + 8;
     const maxTop = chartBottom - tooltipHeight - 8;
-    const pointerY = chartTop + point[1];
+    const pointerY = chartTop + effectivePoint[1];
     const gap = 16;
 
     const spaceAbove = pointerY - chartTop - tooltipHeight - gap;
