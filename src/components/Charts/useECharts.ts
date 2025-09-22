@@ -367,13 +367,122 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       const constrainedPoint: TooltipPoint = [clampedX, clampedY];
       lastTooltipPointRef.current = constrainedPoint;
 
-      chart.dispatchAction({ type: 'updateAxisPointer', x: clampedX, y: clampedY });
-      chart.dispatchAction({
-        type: 'showTip',
-        x: clampedX,
-        y: clampedY,
-        position: [clampedX, clampedY],
-      });
+      const toFiniteNumber = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return value;
+        }
+        if (typeof value === 'string') {
+          const numeric = Number(value);
+          if (Number.isFinite(numeric)) {
+            return numeric;
+          }
+        }
+        return null;
+      };
+
+      const extractTimestamp = (entry: unknown): number | null => {
+        if (entry == null) {
+          return null;
+        }
+        if (Array.isArray(entry)) {
+          if (entry.length === 0) {
+            return null;
+          }
+          return toFiniteNumber(entry[0]);
+        }
+        if (typeof entry === 'object') {
+          const record = entry as Record<string, unknown>;
+          if ('value' in record) {
+            const fromValue = extractTimestamp(record['value']);
+            if (fromValue !== null) {
+              return fromValue;
+            }
+          }
+          if ('x' in record) {
+            const maybeX = toFiniteNumber(record['x']);
+            if (maybeX !== null) {
+              return maybeX;
+            }
+          }
+          if ('axisValue' in record) {
+            const maybeAxisValue = toFiniteNumber(record['axisValue']);
+            if (maybeAxisValue !== null) {
+              return maybeAxisValue;
+            }
+          }
+        }
+        return toFiniteNumber(entry);
+      };
+
+      let matchedSeriesIndex: number | null = null;
+      let matchedDataIndex: number | null = null;
+
+      const axisCoordinate = chart.convertFromPixel({ xAxisIndex: 0 }, [clampedX, 0]);
+      const axisValueCandidate = Array.isArray(axisCoordinate) ? axisCoordinate[0] : axisCoordinate;
+      const axisValue = toFiniteNumber(axisValueCandidate);
+
+      if (axisValue !== null) {
+        const option = chart.getOption();
+        const rawSeriesList = Array.isArray(option.series)
+          ? option.series
+          : option.series != null
+            ? [option.series]
+            : [];
+
+        for (let seriesIndex = 0; seriesIndex < rawSeriesList.length; seriesIndex += 1) {
+          const series = rawSeriesList[seriesIndex];
+          if (!series || typeof series !== 'object') {
+            continue;
+          }
+
+          const data = (series as { data?: unknown }).data;
+          if (!Array.isArray(data) || data.length === 0) {
+            continue;
+          }
+
+          let bestIndex = -1;
+          let bestDistance = Number.POSITIVE_INFINITY;
+
+          for (let dataIndex = 0; dataIndex < data.length; dataIndex += 1) {
+            const timestamp = extractTimestamp(data[dataIndex]);
+            if (timestamp === null) {
+              continue;
+            }
+
+            const distance = Math.abs(timestamp - axisValue);
+            if (distance < bestDistance) {
+              bestIndex = dataIndex;
+              bestDistance = distance;
+            }
+
+            if (distance === 0) {
+              break;
+            }
+          }
+
+          if (bestIndex >= 0) {
+            matchedSeriesIndex = seriesIndex;
+            matchedDataIndex = bestIndex;
+            break;
+          }
+        }
+      }
+
+      if (matchedSeriesIndex !== null && matchedDataIndex !== null) {
+        chart.dispatchAction({
+          type: 'updateAxisPointer',
+          seriesIndex: matchedSeriesIndex,
+          dataIndex: matchedDataIndex,
+        });
+        chart.dispatchAction({
+          type: 'showTip',
+          seriesIndex: matchedSeriesIndex,
+          dataIndex: matchedDataIndex,
+        });
+      } else {
+        chart.dispatchAction({ type: 'updateAxisPointer', x: clampedX, y: clampedY });
+        chart.dispatchAction({ type: 'showTip', x: clampedX, y: clampedY });
+      }
     };
 
     const hideTooltip = () => {
