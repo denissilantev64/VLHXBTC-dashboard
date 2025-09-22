@@ -36,6 +36,7 @@ function createTooltipPositioner(
     const tooltipWidth = size.contentSize[0] ?? 0;
     const tooltipHeight = size.contentSize[1] ?? 0;
 
+
     const toFiniteNumber = (value: unknown): number | null => {
       if (typeof value === 'number') {
         return Number.isFinite(value) ? value : null;
@@ -143,18 +144,21 @@ function createTooltipPositioner(
       return { seriesIndex, point: result };
     };
 
+
     let anchorPointX: number | null = null;
     let anchorPointY: number | null = null;
     const chart = getChart();
     if (chart) {
       const paramsList = Array.isArray(params) ? params : params ? [params] : [];
       for (const entry of paramsList) {
+
         const { seriesIndex, point: extracted } = resolveDataPoint(entry);
         if (seriesIndex === null || extracted.x === null || extracted.y === null) {
           continue;
         }
 
         const pixelPoint = chart.convertToPixel({ seriesIndex }, [extracted.x, extracted.y]);
+
         if (!Array.isArray(pixelPoint) || pixelPoint.length < 2) {
           continue;
         }
