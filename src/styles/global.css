@@ -120,7 +120,7 @@ h1 {
 
 .description {
   margin: 24px 0;
-  max-width: min(100%, 720px);
+  max-width: min(100%, 880px);
   color: #b3b3b3;
   font-size: clamp(1rem, 1.8vw, 1.25rem);
   line-height: 1.6;
