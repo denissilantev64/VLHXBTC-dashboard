@@ -57,7 +57,17 @@ export const Header: FC<HeaderProps> = ({
           <p className="description">{translation.description}</p>
         ) : (
           <p className="description">
-            {translation.description.beforeLink}
+            {translation.description.beforeLink ?? ''}
+            {translation.description.fundLinkText && translation.description.fundLinkUrl ? (
+              <a
+                href={translation.description.fundLinkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {translation.description.fundLinkText}
+              </a>
+            ) : null}
+            {translation.description.middleText ?? ''}
             <a
               href={translation.description.linkUrl}
               target="_blank"
