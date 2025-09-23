@@ -33,8 +33,8 @@ export const translations = {
     },
     cta: 'Начать инвестировать',
     filters: {
-      '1D': '1Д',
       '1M': '1М',
+      '2M': '2М',
       '3M': '3М',
       '6M': '6М',
       '1Y': '1Г',
@@ -107,8 +107,8 @@ export const translations = {
     },
     cta: 'Start investing',
     filters: {
-      '1D': '1D',
       '1M': '1M',
+      '2M': '2M',
       '3M': '3M',
       '6M': '6M',
       '1Y': '1Y',
