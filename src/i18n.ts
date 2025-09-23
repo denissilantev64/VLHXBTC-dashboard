@@ -2,8 +2,11 @@ export const translations = {
   ru: {
     title: 'Аналитика Valhalla BTC',
     description: {
-      beforeLink:
-        'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Статистика по фонду существует непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
+      beforeLink: 'Динамика фонда ',
+      fundLinkText: 'Valhalla BTC',
+      fundLinkUrl: 'https://dhedge.org/vault/0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9',
+      middleText:
+        ' по сравнению с обычным удержанием Bitcoin. Статистика по фонду существует непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
       linkText: 'статистику самой стратегии',
       linkUrl:
         'https://dune.com/gmx-io/v2-lp-dashboard?benchmark_e87f66=&period_e52e23=all-time&pool_efd2e5=gm+arbitrum+BTC%2FUSD+%5BWBTC.b-USDC%5D',
