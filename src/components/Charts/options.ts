@@ -98,7 +98,7 @@ function resolveTooltipAxisValue(param: ExtendedCallbackDataParams): string | nu
 }
 
 
-function formatTooltipDate(value: string | number | undefined, locale: string, range: RangeKey): string {
+function formatTooltipDate(value: string | number | undefined, locale: string, _range: RangeKey): string {
   if (value === undefined) {
     return '';
   }
@@ -106,18 +106,12 @@ function formatTooltipDate(value: string | number | undefined, locale: string, r
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  const options: Intl.DateTimeFormatOptions =
-    range === '1D'
-      ? {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-          timeZone: 'UTC',
-        }
-      : { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' };
+  const options: Intl.DateTimeFormatOptions = {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  };
 
   return new Intl.DateTimeFormat(locale, options).format(date).replace(/\u00a0/g, ' ');
 }
@@ -173,18 +167,6 @@ function formatAxisDate(value: string | number, locale: string): string {
   return formatted.replace(/\u00a0/g, ' ').replace('.', '');
 }
 
-function formatAxisTime(value: string | number, locale: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const formatted =
-    new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(date);
-
-  return formatted.replace(/\u00a0/g, ' ');
-}
-
 function hexToRgba(hex: string, alpha: number): string {
   const sanitized = hex.replace('#', '');
   if (sanitized.length !== 6) {
@@ -201,8 +183,8 @@ const ENHANCED_TOUCH_TRIGGER =
   'mousemove|click|touchstart|touchmove' as unknown as TooltipOption['triggerOn'];
 
 const TARGET_LABEL_COUNTS: Record<RangeKey, number> = {
-  '1D': 6,
   '1M': 6,
+  '2M': 6,
   '3M': 6,
   '6M': 6,
   '1Y': 6,
@@ -243,8 +225,7 @@ function createCommonChartOptions(
   range: RangeKey,
   seriesData: Array<Array<[number, number]>>,
 ): EChartsOption {
-  const isDailyRange = range === '1D';
-  const minInterval = isDailyRange ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const minInterval = 24 * 60 * 60 * 1000;
   const bounds = computeTimeBounds(seriesData, minInterval);
   const targetLabels = TARGET_LABEL_COUNTS[range] ?? 6;
   const splitNumber = targetLabels;
@@ -269,8 +250,7 @@ function createCommonChartOptions(
         hideOverlap: true,
         padding: [8, 0, 0, 0],
         interval: 'auto',
-        formatter: (value: string | number) =>
-          (isDailyRange ? formatAxisTime(value, locale) : formatAxisDate(value, locale)),
+        formatter: (value: string | number) => formatAxisDate(value, locale),
       },
       axisTick,
       splitLine: { show: false },

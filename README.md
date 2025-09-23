@@ -8,7 +8,7 @@ Automated data exporter and static dashboard that tracks the dHEDGE vault token 
 - Daily BTC/USD and WBTC/USD prices from CoinGecko with ETag-aware caching.
 - Derived NAV vs BTC analytics (ROI in BTC, ROI in USD, alpha vs BTC) exported as CSV.
 - Production-ready GitHub Actions pipeline that refreshes datasets, builds the dashboard, and deploys GitHub Pages without manual commits.
-- Lightweight React + Vite dashboard (ECharts) with preset time range filters (1D/1M/3M/6M/ALL) that reads CSVs directly from the repository.
+- Lightweight React + Vite dashboard (ECharts) with preset time range filters (1M/2M/3M/6M/ALL) that reads CSVs directly from the repository.
 - Robust error handling, exponential backoff for HTTP requests, RPC fallbacks, and data sanity checks.
 
 ## Getting Started
@@ -90,7 +90,7 @@ The dashboard loads CSVs from the repository using relative URLs, so it works au
 
 ### Chart Controls & Cards
 
-- **Time ranges** — presets filter the daily dataset to common windows (1D/1M/3M/6M/ALL).
+- **Time ranges** — presets filter the daily dataset to common windows (1M/2M/3M/6M/ALL).
 - **Summary cards** — show the latest VLHXBTC and WBTC prices, plus the performance spread over the selected window.
 - **Auto refresh** — refreshes data every 10 minutes.
 
