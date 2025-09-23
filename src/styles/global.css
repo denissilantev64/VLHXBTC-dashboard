@@ -126,6 +126,11 @@ h1 {
   line-height: 1.6;
 }
 
+.description a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .filters-row {
   display: flex;
   align-items: center;
@@ -223,14 +228,14 @@ footer {
 }
 
 footer a {
-  color: #00a0d0;
+  color: inherit;
   text-decoration: underline;
   transition: color 0.2s ease;
 }
 
 footer a:hover,
 footer a:focus-visible {
-  color: #4dd8ff;
+  color: inherit;
 }
 
 @media (min-width: 640px) {
