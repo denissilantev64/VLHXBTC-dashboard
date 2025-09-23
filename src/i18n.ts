@@ -3,7 +3,7 @@ export const translations = {
     title: 'Аналитика Valhalla BTC',
     description: {
       beforeLink:
-        'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Статистика по фонду существует за непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
+        'Динамика фонда Valhalla BTC по сравнению с обычным удержанием Bitcoin. Статистика по фонду существует непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
       linkText: 'статистику самой стратегии',
       linkUrl:
         'https://dune.com/gmx-io/v2-lp-dashboard?benchmark_e87f66=&period_e52e23=all-time&pool_efd2e5=gm+arbitrum+BTC%2FUSD+%5BWBTC.b-USDC%5D',
