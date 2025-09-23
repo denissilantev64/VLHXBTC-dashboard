@@ -10,7 +10,11 @@ export const translations = {
       linkText: 'статистику самой стратегии',
       linkUrl:
         'https://dune.com/gmx-io/v2-lp-dashboard?benchmark_e87f66=&period_e52e23=all-time&pool_efd2e5=gm+arbitrum+BTC%2FUSD+%5BWBTC.b-USDC%5D',
-      afterLink: '.',
+      afterLink: '. ',
+      additionalLink: {
+        text: 'Подробнее о фонде.',
+        url: 'https://vlhx.io',
+      },
     },
     footer: {
       blockchainNotice: 'Метрики формируются на основе on-chain данных сети Arbitrum и обновляются ежедневно.',

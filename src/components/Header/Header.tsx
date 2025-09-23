@@ -29,7 +29,7 @@ export const Header: FC<HeaderProps> = ({
   return (
     <header className="top-bar">
       <div className="header-nav">
-        <a className="logo-link" href={baseHref} aria-label="Valhalla home">
+        <a className="logo-link" href="https://vlhx.io" aria-label="Valhalla home">
           <img src={`${baseHref}logo.svg`} alt="Valhalla" />
         </a>
         <div className="header-actions">
@@ -76,6 +76,15 @@ export const Header: FC<HeaderProps> = ({
               {translation.description.linkText}
             </a>
             {translation.description.afterLink ?? ''}
+            {translation.description.additionalLink ? (
+              <a
+                href={translation.description.additionalLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {translation.description.additionalLink.text}
+              </a>
+            ) : null}
           </p>
         )}
       </div>
