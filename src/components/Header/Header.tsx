@@ -53,7 +53,21 @@ export const Header: FC<HeaderProps> = ({
       </div>
       <div className="brand">
         <h1>{translation.title}</h1>
-        <p className="description">{translation.description}</p>
+        {typeof translation.description === 'string' ? (
+          <p className="description">{translation.description}</p>
+        ) : (
+          <p className="description">
+            {translation.description.beforeLink}
+            <a
+              href={translation.description.linkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {translation.description.linkText}
+            </a>
+            {translation.description.afterLink ?? ''}
+          </p>
+        )}
       </div>
       <div className="filters-row">
         <span className="filters-caption">{translation.periodLabel}</span>
