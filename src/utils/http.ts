@@ -10,6 +10,7 @@ interface FetchJsonOptions {
   etagCacheKey?: string;
   timeoutMs?: number;
   retries?: number;
+  headers?: Record<string, string>;
 }
 
 interface EtagStore {
@@ -54,10 +55,11 @@ function delay(ms: number): Promise<void> {
 }
 
 export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}): Promise<T> {
-  const { etagCacheKey, timeoutMs = 15000, retries = 5 } = options;
+  const { etagCacheKey, timeoutMs = 15000, retries = 5, headers: extraHeaders = {} } = options;
   const etags = loadEtags();
   const headers: Record<string, string> = {
-    'User-Agent': 'vlxhbtc-dashboard/1.0 (+https://github.com)'
+    'User-Agent': 'vlxhbtc-dashboard/1.0 (+https://github.com)',
+    ...extraHeaders,
   };
   if (etagCacheKey && etags[etagCacheKey]) {
     headers['If-None-Match'] = etags[etagCacheKey];

@@ -16,8 +16,7 @@ export const ARBITRUM_RPC_FALLBACKS = (
   .filter((url) => url.length > 0);
 
 export const DAILY_NAV_CSV = 'public/data/nav_tokenprice_usd_daily.csv';
-export const DAILY_BTC_CSV = 'public/data/btc_usd_daily.csv';
 export const DAILY_WBTC_CSV = 'public/data/wbtc_usd_daily.csv';
-export const DAILY_NAV_BTC_CSV = 'public/data/nav_btc_daily.csv';
+export const DAILY_NAV_WBTC_CSV = 'public/data/nav_wbtc_daily.csv';
 export const TOKEN_PRICE_START_DATE = process.env.TOKEN_PRICE_START_DATE ?? '2025-07-23';
 
