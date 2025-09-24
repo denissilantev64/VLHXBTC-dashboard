@@ -3,12 +3,14 @@ import { writeCSV } from './utils/csv.js';
 import { logger } from './utils/log.js';
 import {
   fetchCoinGeckoDaily,
+  fetchCoinMarketCapDaily,
   fetchCryptoCompareDaily,
   fetchDailyPricesWithFallback,
 } from './utils/prices.js';
 
 async function main(): Promise<void> {
   const prices = await fetchDailyPricesWithFallback('WBTC/USD', [
+    { name: 'CoinMarketCap', fetch: () => fetchCoinMarketCapDaily('WBTC') },
     { name: 'CoinGecko', fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily') },
     { name: 'CryptoCompare', fetch: () => fetchCryptoCompareDaily('WBTC') },
   ]);
