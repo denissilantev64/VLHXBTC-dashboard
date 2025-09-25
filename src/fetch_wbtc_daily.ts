@@ -10,7 +10,9 @@ import {
 
 async function main(): Promise<void> {
   const startDate = PRICE_SERIES_START_DATE;
+
   const sources = [
+
     {
       name: 'CoinGecko',
       fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily', startDate),
@@ -26,6 +28,7 @@ async function main(): Promise<void> {
     logger.warn('Skipping CoinMarketCap because COINMARKETCAP_API_KEY is not set.');
   }
   const prices = await fetchDailyPricesWithFallback('WBTC/USD', sources);
+
 
   const rows = prices
     .map(({ day, price }) => ({ day, wbtc_usd: price.toFixed(2) }))
