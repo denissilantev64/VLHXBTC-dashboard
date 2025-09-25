@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && tsc",
     "preview": "vite preview",
-    "daily": "tsc && node dist/export_token_price_daily.js && node dist/fetch_btc_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_btc_daily.js"
+    "daily": "tsc && node dist/export_token_price_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_wbtc_daily.js"
   },
   "dependencies": {
     "echarts": "^6.0.0",

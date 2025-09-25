@@ -17,7 +17,7 @@ export const RANGE_CONFIG: Record<RangeKey, RangeConfig> = {
 export const RANGE_ORDER: RangeKey[] = ['1M', '2M', '3M', '6M', '1Y', 'ALL'];
 
 const DATA_SOURCES = {
-  nav: 'data/nav_btc_daily.csv',
+  nav: 'data/nav_wbtc_daily.csv',
   wbtc: 'data/wbtc_usd_daily.csv',
 } as const;
 
@@ -29,11 +29,10 @@ export interface DailyEntry {
   date: Date;
   isoDate: string;
   navUsd: number;
-  navBtc: number;
-  roiBtc: number;
+  navWbtc: number;
+  roiWbtc: number;
   roiUsd: number;
-  alphaVsBtc: number;
-  btcUsd: number;
+  alphaVsWbtc: number;
   wbtcUsd: number;
 }
 
@@ -117,12 +116,11 @@ function toDailyEntries(rows: Record<string, string>[], wbtcMap: Map<string, num
         date,
         isoDate: row.day,
         navUsd: parseNumber(row.nav_usd),
-        navBtc: parseNumber(row.nav_btc),
-        roiBtc: parseNumber(row.roi_in_btc) * 100,
+        navWbtc: parseNumber(row.nav_wbtc),
+        roiWbtc: parseNumber(row.roi_in_wbtc) * 100,
         roiUsd: parseNumber(row.roi_in_usd) * 100,
-        alphaVsBtc: parseNumber(row.alpha_vs_btc) * 100,
-        btcUsd: parseNumber(row.btc_usd),
-        wbtcUsd: parseNumber(wbtcMap.get(row.day)),
+        alphaVsWbtc: parseNumber(row.alpha_vs_wbtc) * 100,
+        wbtcUsd: parseNumber(row.wbtc_usd ?? wbtcMap.get(row.day)),
       } satisfies DailyEntry;
     })
     .filter((entry) => entry.date instanceof Date && !Number.isNaN(entry.date.getTime()))
