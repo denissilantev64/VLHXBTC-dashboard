@@ -65,20 +65,28 @@ function determineDaysToFetch(existing: DayPrice[]): string[] {
   const existingSet = new Set(existing.map((row) => row.day));
   const now = new Date();
   const endDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
-  const earliestDate = parseDay(TOKEN_PRICE_START_DATE);
-  if (endDate.getTime() < earliestDate.getTime()) {
+  const configuredStart = parseDay(TOKEN_PRICE_START_DATE);
+  if (endDate.getTime() < configuredStart.getTime() || endDate.getTime() < 0) {
     return [];
   }
-  if (endDate.getTime() < 0) {
-    return [];
+
+  let startDate = configuredStart;
+  if (existing.length > 0) {
+    const lastKnownDay = parseDay(existing[existing.length - 1].day);
+    const dayAfterLast = addDays(lastKnownDay, 1);
+    if (dayAfterLast.getTime() > startDate.getTime()) {
+      startDate = dayAfterLast;
+    }
   }
+
   const missing: string[] = [];
-  for (let d = new Date(earliestDate.getTime()); d <= endDate; d = addDays(d, 1)) {
+  for (let d = new Date(startDate.getTime()); d <= endDate; d = addDays(d, 1)) {
     const day = isoDay(d);
     if (!existingSet.has(day)) {
       missing.push(day);
     }
   }
+
   if (missing.length === 0) {
     return [];
   }
@@ -113,7 +121,7 @@ async function main(): Promise<void> {
     return;
   }
   const providers = buildProviderSequence();
-  const contracts = providers.map((provider) => new Contract(POOL_LOGIC_ADDRESS, ABI, provider));
+  const contracts = providers.map(({ provider }) => new Contract(POOL_LOGIC_ADDRESS, ABI, provider));
   const blockHints: Array<number | null> = providers.map(() => null);
   const history = [...existing];
   const newRows: DayPrice[] = [];
@@ -122,9 +130,9 @@ async function main(): Promise<void> {
     for (let i = 0; i < providers.length; i += 1) {
       try {
         const hint = blockHints[i] ?? undefined;
-        const block = await blockAtEndOfDayUTCWithHint(providers[i], parseDay(day), hint);
+        const block = await blockAtEndOfDayUTCWithHint(providers[i].provider, parseDay(day), hint);
         blockHints[i] = block;
-        const value = await fetchTokenPrice(providers[i], contracts[i], day, block);
+        const value = await fetchTokenPrice(providers[i].provider, contracts[i], day, block);
         const candidate: DayPrice = { day, token_price_usd: value.toFixed(8) };
         if (!passesSanityCheck([...history, ...newRows], candidate)) {
           throw new Error('Sanity check failed (>10% deviation from rolling median)');
@@ -132,11 +140,11 @@ async function main(): Promise<void> {
         fetched = value;
         newRows.push(candidate);
         history.push(candidate);
-        logger.info(`Fetched NAV ${value.toFixed(8)} for ${day} using provider ${i + 1}`);
+        logger.info(`Fetched NAV ${value.toFixed(8)} for ${day} using provider ${i + 1} (${providers[i].url})`);
         break;
       } catch (error) {
         logger.warn(
-          `Failed to fetch NAV for ${day} using provider ${i + 1}: ${(error as Error).message}`,
+          `Failed to fetch NAV for ${day} using provider ${i + 1} (${providers[i].url}): ${(error as Error).message}`,
         );
       }
     }

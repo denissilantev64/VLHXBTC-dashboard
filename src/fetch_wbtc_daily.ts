@@ -12,7 +12,6 @@ async function main(): Promise<void> {
   const startDate = PRICE_SERIES_START_DATE;
 
   const sources = [
-
     {
       name: 'CoinGecko',
       fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily', startDate),

@@ -270,7 +270,6 @@ export async function fetchCoinMarketCapDaily(
   }
   const rows = Array.from(map.entries()).map(([day, price]) => ({ day, price }));
   return filterByStartDate(rows, options.startDate);
-
 }
 
 interface PriceSource {

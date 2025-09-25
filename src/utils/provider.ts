@@ -3,6 +3,11 @@ import { ARBITRUM_RPC, ARBITRUM_RPC_FALLBACKS } from '../config.js';
 import { logger } from './log.js';
 import { initGlobalProxy } from './proxy.js';
 
+export interface ProviderEntry {
+  url: string;
+  provider: JsonRpcProvider;
+}
+
 export function createProvider(url: string): JsonRpcProvider {
   const network = Network.from(42161);
   return new JsonRpcProvider(url, network, { staticNetwork: network });
@@ -14,7 +19,7 @@ export function getProviderUrls(): string[] {
   return unique;
 }
 
-export function buildProviderSequence(): JsonRpcProvider[] {
+export function buildProviderSequence(): ProviderEntry[] {
   initGlobalProxy();
   const urls = getProviderUrls();
   if (urls.length === 0) {
@@ -22,6 +27,6 @@ export function buildProviderSequence(): JsonRpcProvider[] {
   }
   return urls.map((url) => {
     logger.info(`Using RPC endpoint ${url}`);
-    return createProvider(url);
+    return { url, provider: createProvider(url) };
   });
 }
