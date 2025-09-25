@@ -20,6 +20,7 @@ const fallbackEnv = envOrUndefined('ARBITRUM_RPC_FALLBACKS');
 const fallbackString =
   fallbackEnv ?? (ARBITRUM_RPC === DEFAULT_ARBITRUM_RPC ? DEFAULT_ARBITRUM_FALLBACKS.join(',') : '');
 export const ARBITRUM_RPC_FALLBACKS = fallbackString
+
   .split(',')
   .map((url) => url.trim())
   .filter((url) => url.length > 0);
