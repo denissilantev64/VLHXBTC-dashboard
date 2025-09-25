@@ -5,11 +5,18 @@ const DEFAULT_ARBITRUM_FALLBACKS = [
   'https://1rpc.io/arb',
 ];
 
-export const ARBITRUM_RPC = process.env.ARBITRUM_RPC ?? DEFAULT_ARBITRUM_RPC;
+function envOrUndefined(key: string): string | undefined {
+  const value = process.env[key];
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export const ARBITRUM_RPC = envOrUndefined('ARBITRUM_RPC') ?? DEFAULT_ARBITRUM_RPC;
 export const ARBITRUM_RPC_FALLBACKS = (
-  process.env.ARBITRUM_RPC_FALLBACKS?.length
-    ? process.env.ARBITRUM_RPC_FALLBACKS
-    : DEFAULT_ARBITRUM_FALLBACKS.join(',')
+  envOrUndefined('ARBITRUM_RPC_FALLBACKS') ?? DEFAULT_ARBITRUM_FALLBACKS.join(',')
 )
   .split(',')
   .map((url) => url.trim())
@@ -18,5 +25,6 @@ export const ARBITRUM_RPC_FALLBACKS = (
 export const DAILY_NAV_CSV = 'public/data/nav_tokenprice_usd_daily.csv';
 export const DAILY_WBTC_CSV = 'public/data/wbtc_usd_daily.csv';
 export const DAILY_NAV_WBTC_CSV = 'public/data/nav_wbtc_daily.csv';
-export const TOKEN_PRICE_START_DATE = process.env.TOKEN_PRICE_START_DATE ?? '2025-07-23';
+export const TOKEN_PRICE_START_DATE = envOrUndefined('TOKEN_PRICE_START_DATE') ?? process.env.TOKEN_PRICE_START_DATE ?? '2025-07-23';
+
 

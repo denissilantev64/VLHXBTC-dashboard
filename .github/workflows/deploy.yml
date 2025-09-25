@@ -27,6 +27,14 @@ jobs:
       - run: npm ci
       - name: Refresh datasets
         run: npm run daily
+        env:
+          ARBITRUM_RPC: ${{ secrets.ARBITRUM_RPC }}
+          ARBITRUM_RPC_FALLBACKS: ${{ secrets.ARBITRUM_RPC_FALLBACKS }}
+          COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          NO_PROXY: ${{ secrets.NO_PROXY }}
+          TOKEN_PRICE_START_DATE: ${{ secrets.TOKEN_PRICE_START_DATE }}
       - name: Build static dashboard
         run: npm run build
       - name: Configure Pages
