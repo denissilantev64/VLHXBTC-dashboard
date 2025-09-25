@@ -20,6 +20,7 @@ const fallbackEnv = envOrUndefined('ARBITRUM_RPC_FALLBACKS');
 const fallbackString =
   fallbackEnv ?? (ARBITRUM_RPC === DEFAULT_ARBITRUM_RPC ? DEFAULT_ARBITRUM_FALLBACKS.join(',') : '');
 export const ARBITRUM_RPC_FALLBACKS = fallbackString
+
   .split(',')
   .map((url) => url.trim())
   .filter((url) => url.length > 0);
@@ -30,4 +31,5 @@ export const DAILY_NAV_WBTC_CSV = 'public/data/nav_wbtc_daily.csv';
 export const TOKEN_PRICE_START_DATE = envOrUndefined('TOKEN_PRICE_START_DATE') ?? DEFAULT_START_DATE;
 export const PRICE_SERIES_START_DATE =
   envOrUndefined('PRICE_SERIES_START_DATE') ?? TOKEN_PRICE_START_DATE;
+
 
