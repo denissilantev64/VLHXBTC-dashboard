@@ -38,6 +38,12 @@ export function initGlobalProxy(): void {
     initialized = true;
     return;
   }
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.startsWith('127.')) {
+    logger.warn(`Skipping proxy bootstrap because proxy host is loopback: ${proxyUrl}`);
+    initialized = true;
+    return;
+  }
   if (!process.env.GLOBAL_AGENT_HTTP_PROXY) {
     process.env.GLOBAL_AGENT_HTTP_PROXY = proxyUrl;
   }
