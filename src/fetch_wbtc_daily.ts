@@ -1,16 +1,25 @@
-import { DAILY_WBTC_CSV } from './config.js';
+import { DAILY_WBTC_CSV, PRICE_SERIES_START_DATE } from './config.js';
 import { writeCSV } from './utils/csv.js';
 import { logger } from './utils/log.js';
 import {
   fetchCoinGeckoDaily,
+  fetchCoinMarketCapDaily,
   fetchCryptoCompareDaily,
   fetchDailyPricesWithFallback,
 } from './utils/prices.js';
 
 async function main(): Promise<void> {
+  const startDate = PRICE_SERIES_START_DATE;
   const prices = await fetchDailyPricesWithFallback('WBTC/USD', [
-    { name: 'CoinGecko', fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily') },
-    { name: 'CryptoCompare', fetch: () => fetchCryptoCompareDaily('WBTC') },
+    {
+      name: 'CoinMarketCap',
+      fetch: () => fetchCoinMarketCapDaily('WBTC', { startDate }),
+    },
+    {
+      name: 'CoinGecko',
+      fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily', startDate),
+    },
+    { name: 'CryptoCompare', fetch: () => fetchCryptoCompareDaily('WBTC', startDate) },
   ]);
 
   const rows = prices

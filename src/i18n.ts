@@ -6,7 +6,7 @@ export const translations = {
       fundLinkText: 'Valhalla BTC',
       fundLinkUrl: 'https://dhedge.org/vault/0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9',
       middleText:
-        ' по сравнению с обычным удержанием Bitcoin. Статистика по фонду существует непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
+        ' по сравнению с удержанием WBTC. Статистика по фонду существует непродолжительное время, для лучшей оценки эффективности рекомендуем смотреть ',
       linkText: 'статистику самой стратегии',
       linkUrl:
         'https://dune.com/gmx-io/v2-lp-dashboard?benchmark_e87f66=&period_e52e23=all-time&pool_efd2e5=gm+arbitrum+BTC%2FUSD+%5BWBTC.b-USDC%5D',
@@ -59,7 +59,7 @@ export const translations = {
       vlhx: { label: 'VLHXBTC', change: 'Изменение за период' },
       wbtc: { label: 'WBTC', change: 'Изменение за период' },
       spread: {
-        label: 'Доходность фонда в BTC',
+        label: 'Доходность фонда относительно WBTC',
         note: 'Преимущество VLHXBTC относительно изменения WBTC',
       },
     },
@@ -79,7 +79,7 @@ export const translations = {
         },
       },
       diff: {
-        title: 'Доходность фонда в BTC (%)',
+        title: 'Доходность фонда относительно WBTC (%)',
         series: {
           diff: 'Разница изменений',
         },
@@ -89,7 +89,7 @@ export const translations = {
   en: {
     title: 'Valhalla BTC Analytics',
     description:
-      'Performance of the Valhalla BTC fund versus holding Bitcoin directly.',
+      'Performance of the Valhalla BTC fund versus holding Wrapped Bitcoin (WBTC).',
     footer: {
       blockchainNotice: 'All analytics are derived from on-chain data on Arbitrum and updated daily.',
       vlhx: {
@@ -132,7 +132,7 @@ export const translations = {
     cards: {
       vlhx: { label: 'VLHXBTC', change: 'Change over period' },
       wbtc: { label: 'WBTC', change: 'Change over period' },
-      spread: { label: 'Performance spread', note: 'VLHXBTC change minus WBTC change' },
+      spread: { label: 'Performance vs WBTC', note: 'VLHXBTC change minus WBTC change' },
     },
     charts: {
       price: {
@@ -150,7 +150,7 @@ export const translations = {
         },
       },
       diff: {
-        title: 'Fund Performance in BTC (%)',
+        title: 'Fund Performance vs WBTC (%)',
         series: {
           diff: 'Change spread',
         },
