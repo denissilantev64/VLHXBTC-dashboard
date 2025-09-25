@@ -32,4 +32,3 @@ export const TOKEN_PRICE_START_DATE = envOrUndefined('TOKEN_PRICE_START_DATE') ?
 export const PRICE_SERIES_START_DATE =
   envOrUndefined('PRICE_SERIES_START_DATE') ?? TOKEN_PRICE_START_DATE;
 
-

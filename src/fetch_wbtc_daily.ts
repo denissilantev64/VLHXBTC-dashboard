@@ -10,17 +10,25 @@ import {
 
 async function main(): Promise<void> {
   const startDate = PRICE_SERIES_START_DATE;
-  const prices = await fetchDailyPricesWithFallback('WBTC/USD', [
-    {
-      name: 'CoinMarketCap',
-      fetch: () => fetchCoinMarketCapDaily('WBTC', { startDate }),
-    },
+
+  const sources = [
+
     {
       name: 'CoinGecko',
       fetch: () => fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily', startDate),
     },
     { name: 'CryptoCompare', fetch: () => fetchCryptoCompareDaily('WBTC', startDate) },
-  ]);
+  ];
+  if (process.env.COINMARKETCAP_API_KEY) {
+    sources.unshift({
+      name: 'CoinMarketCap',
+      fetch: () => fetchCoinMarketCapDaily('WBTC', { startDate }),
+    });
+  } else {
+    logger.warn('Skipping CoinMarketCap because COINMARKETCAP_API_KEY is not set.');
+  }
+  const prices = await fetchDailyPricesWithFallback('WBTC/USD', sources);
+
 
   const rows = prices
     .map(({ day, price }) => ({ day, wbtc_usd: price.toFixed(2) }))

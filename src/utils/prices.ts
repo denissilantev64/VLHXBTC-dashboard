@@ -270,60 +270,7 @@ export async function fetchCoinMarketCapDaily(
   }
   const rows = Array.from(map.entries()).map(([day, price]) => ({ day, price }));
   return filterByStartDate(rows, options.startDate);
-}
 
-export async function fetchCoinMarketCapDaily(symbol: string): Promise<DailyPricePoint[]> {
-  const apiKey = process.env.COINMARKETCAP_API_KEY;
-  if (!apiKey) {
-    throw new Error('COINMARKETCAP_API_KEY is not defined');
-  }
-  const params = new URLSearchParams({
-    symbol,
-    convert: 'USD',
-    interval: 'daily',
-    time_start: '2019-01-01',
-  });
-  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical?${params.toString()}`;
-  const headers = { 'X-CMC_PRO_API_KEY': apiKey };
-  let data: CoinMarketCapOhlcvResponse | null = null;
-  try {
-    data = await fetchJson<CoinMarketCapOhlcvResponse>(url, { headers });
-  } catch (error) {
-    logger.warn(
-      `CoinMarketCap fetch failed via standard client for ${symbol}: ${(error as Error).message}. Using HTTPS fallback.`,
-    );
-  }
-  if (!data) {
-    try {
-      data = await fetchJsonViaHttps<CoinMarketCapOhlcvResponse>(url, headers);
-    } catch (error) {
-      logger.warn(
-        `CoinMarketCap HTTPS fallback failed for ${symbol}: ${(error as Error).message}. Using curl fallback.`,
-      );
-    }
-  }
-  if (!data) {
-    data = await fetchJsonViaCurl<CoinMarketCapOhlcvResponse>(url, headers);
-  }
-  const quotes = data?.data?.quotes;
-  if (!Array.isArray(quotes)) {
-    throw new Error('Missing quotes array in CoinMarketCap response');
-  }
-  const map = new Map<string, number>();
-  quotes.forEach((entry) => {
-    const closeTime = entry?.time_close;
-    const closePrice = entry?.quote?.USD?.close;
-    const timestamp = closeTime ? Date.parse(closeTime) : Number.NaN;
-    if (!Number.isFinite(closePrice ?? Number.NaN) || !Number.isFinite(timestamp)) {
-      return;
-    }
-    const day = isoDayFromMs(timestamp);
-    map.set(day, closePrice as number);
-  });
-  if (map.size === 0) {
-    throw new Error('No valid data points returned by CoinMarketCap');
-  }
-  return Array.from(map.entries()).map(([day, price]) => ({ day, price }));
 }
 
 interface PriceSource {
