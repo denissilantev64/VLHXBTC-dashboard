@@ -117,9 +117,17 @@ async function fetchJsonViaCurl<T>(
   return JSON.parse(stdout) as T;
 }
 
+function filterByStartDate(points: DailyPricePoint[], startDate?: string): DailyPricePoint[] {
+  if (!startDate) {
+    return points;
+  }
+  return points.filter((point) => point.day >= startDate);
+}
+
 export async function fetchCoinGeckoDaily(
   coinId: string,
   cacheKey: string,
+  startDate?: string,
 ): Promise<DailyPricePoint[]> {
   const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=max&interval=daily`;
   let data: CoinGeckoMarketChartResponse | null = null;
@@ -150,10 +158,14 @@ export async function fetchCoinGeckoDaily(
     const day = isoDayFromMs(ms);
     map.set(day, price);
   }
-  return Array.from(map.entries()).map(([day, price]) => ({ day, price }));
+  const rows = Array.from(map.entries()).map(([day, price]) => ({ day, price }));
+  return filterByStartDate(rows, startDate);
 }
 
-export async function fetchCryptoCompareDaily(symbol: string): Promise<DailyPricePoint[]> {
+export async function fetchCryptoCompareDaily(
+  symbol: string,
+  startDate?: string,
+): Promise<DailyPricePoint[]> {
   const url = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=${encodeURIComponent(
     symbol,
   )}&tsym=USD&allData=true`;
@@ -191,7 +203,73 @@ export async function fetchCryptoCompareDaily(symbol: string): Promise<DailyPric
     const day = isoDayFromSeconds(entry.time);
     rows.push({ day, price: entry.close });
   }
-  return rows;
+  return filterByStartDate(rows, startDate);
+}
+
+interface CoinMarketCapOptions {
+  startDate?: string;
+}
+
+export async function fetchCoinMarketCapDaily(
+  symbol: string,
+  options: CoinMarketCapOptions = {},
+): Promise<DailyPricePoint[]> {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    throw new Error('COINMARKETCAP_API_KEY is not defined');
+  }
+  const params = new URLSearchParams({
+    symbol,
+    convert: 'USD',
+    interval: 'daily',
+  });
+  if (options.startDate) {
+    params.set('time_start', options.startDate);
+  } else {
+    params.set('time_start', '2019-01-01');
+  }
+  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical?${params.toString()}`;
+  const headers = { 'X-CMC_PRO_API_KEY': apiKey };
+  let data: CoinMarketCapOhlcvResponse | null = null;
+  try {
+    data = await fetchJson<CoinMarketCapOhlcvResponse>(url, { headers });
+  } catch (error) {
+    logger.warn(
+      `CoinMarketCap fetch failed via standard client for ${symbol}: ${(error as Error).message}. Using HTTPS fallback.`,
+    );
+  }
+  if (!data) {
+    try {
+      data = await fetchJsonViaHttps<CoinMarketCapOhlcvResponse>(url, headers);
+    } catch (error) {
+      logger.warn(
+        `CoinMarketCap HTTPS fallback failed for ${symbol}: ${(error as Error).message}. Using curl fallback.`,
+      );
+    }
+  }
+  if (!data) {
+    data = await fetchJsonViaCurl<CoinMarketCapOhlcvResponse>(url, headers);
+  }
+  const quotes = data?.data?.quotes;
+  if (!Array.isArray(quotes)) {
+    throw new Error('Missing quotes array in CoinMarketCap response');
+  }
+  const map = new Map<string, number>();
+  quotes.forEach((entry) => {
+    const closeTime = entry?.time_close;
+    const closePrice = entry?.quote?.USD?.close;
+    const timestamp = closeTime ? Date.parse(closeTime) : Number.NaN;
+    if (!Number.isFinite(closePrice ?? Number.NaN) || !Number.isFinite(timestamp)) {
+      return;
+    }
+    const day = isoDayFromMs(timestamp);
+    map.set(day, closePrice as number);
+  });
+  if (map.size === 0) {
+    throw new Error('No valid data points returned by CoinMarketCap');
+  }
+  const rows = Array.from(map.entries()).map(([day, price]) => ({ day, price }));
+  return filterByStartDate(rows, options.startDate);
 }
 
 export async function fetchCoinMarketCapDaily(symbol: string): Promise<DailyPricePoint[]> {
