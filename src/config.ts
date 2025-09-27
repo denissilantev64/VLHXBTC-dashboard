@@ -11,23 +11,32 @@ function envOrUndefined(key: string): string | undefined {
 }
 
 function resolveRpcEndpoint(): string {
-  const rpc = envOrUndefined('ARBITRUM_RPC') ?? envOrUndefined('INFURA_ARBITRUM_RPC');
+  const explicitRpc = envOrUndefined('ARBITRUM_RPC');
+  const infuraProjectId =
+    envOrUndefined('INFURA_PROJECT_ID') ??
+    envOrUndefined('INFURA_API_KEY') ??
+    envOrUndefined('INFURA_ARBITRUM_KEY') ??
+    envOrUndefined('INFURA_KEY');
+
+  const infuraRpc =
+    envOrUndefined('INFURA_ARBITRUM_RPC') ??
+    envOrUndefined('INFURA_ARBITRUM_RPC_URL') ??
+    (infuraProjectId
+      ? `https://arbitrum-mainnet.infura.io/v3/${infuraProjectId}`
+      : undefined);
+
+  const rpc = explicitRpc ?? infuraRpc;
+
   if (!rpc) {
     throw new Error(
-      'Missing Arbitrum RPC endpoint. Set ARBITRUM_RPC or INFURA_ARBITRUM_RPC to a valid Infura URL.'
+      'Missing Arbitrum RPC endpoint. Provide ARBITRUM_RPC or set an Infura key/URL.'
     );
   }
+
   return rpc;
 }
 
 export const ARBITRUM_RPC = resolveRpcEndpoint();
-const fallbackEnv =
-  envOrUndefined('ARBITRUM_RPC_FALLBACKS') ?? envOrUndefined('INFURA_ARBITRUM_RPC_FALLBACKS');
-const fallbackString = fallbackEnv ?? '';
-export const ARBITRUM_RPC_FALLBACKS = fallbackString
-  .split(',')
-  .map((url) => url.trim())
-  .filter((url) => url.length > 0 && url !== ARBITRUM_RPC);
 
 export const DAILY_NAV_CSV = 'public/data/nav_tokenprice_usd_daily.csv';
 export const DAILY_WBTC_CSV = 'public/data/wbtc_usd_daily.csv';

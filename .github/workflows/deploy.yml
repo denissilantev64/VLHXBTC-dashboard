@@ -28,10 +28,9 @@ jobs:
       - name: Refresh datasets
         run: npm run daily
         env:
-          ARBITRUM_RPC: ${{ secrets.ARBITRUM_RPC }}
-          ARBITRUM_RPC_FALLBACKS: ${{ secrets.ARBITRUM_RPC_FALLBACKS }}
-          INFURA_ARBITRUM_RPC: ${{ secrets.INFURA_ARBITRUM_RPC }}
-          INFURA_ARBITRUM_RPC_FALLBACKS: ${{ secrets.INFURA_ARBITRUM_RPC_FALLBACKS }}
+          ARBITRUM_RPC: ${{ secrets.INFURA_ARBITRUM_RPC_URL }}
+          INFURA_ARBITRUM_RPC_URL: ${{ secrets.INFURA_ARBITRUM_RPC_URL }}
+          INFURA_KEY: ${{ secrets.INFURA_KEY }}
           COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
           HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
           HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
