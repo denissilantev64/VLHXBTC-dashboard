@@ -57,6 +57,7 @@ export INFURA_KEY="<your-project-id>"
 # also supported: INFURA_PROJECT_ID / INFURA_API_KEY / INFURA_ARBITRUM_KEY
 
 # Option 3: store the fully qualified URL separately
+# (if you leave it as `.../v3/`, the app will append the id from INFURA_KEY; without any key Infura rejects the call)
 export INFURA_ARBITRUM_RPC_URL="https://arbitrum-mainnet.infura.io/v3/<your-project-id>"
 
 export COINMARKETCAP_API_KEY="your-api-key"

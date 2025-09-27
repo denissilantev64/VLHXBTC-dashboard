@@ -10,6 +10,20 @@ function envOrUndefined(key: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function ensureInfuraProjectId(url: string, projectId: string | undefined): string {
+  const trimmed = url.trim();
+  if (/\/v3\/?$/.test(trimmed)) {
+    if (!projectId) {
+      throw new Error(
+        'INFURA_ARBITRUM_RPC_URL ends with /v3/ but no project id is available. Provide INFURA_KEY or append the id to the URL.'
+      );
+    }
+    const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
+    return `${withoutTrailingSlash}/${projectId}`;
+  }
+  return trimmed;
+}
+
 function resolveRpcEndpoint(): string {
   const explicitRpc = envOrUndefined('ARBITRUM_RPC');
   const infuraProjectId =
@@ -18,12 +32,14 @@ function resolveRpcEndpoint(): string {
     envOrUndefined('INFURA_ARBITRUM_KEY') ??
     envOrUndefined('INFURA_KEY');
 
-  const infuraRpc =
-    envOrUndefined('INFURA_ARBITRUM_RPC') ??
-    envOrUndefined('INFURA_ARBITRUM_RPC_URL') ??
-    (infuraProjectId
+  const infuraRpcEnv =
+    envOrUndefined('INFURA_ARBITRUM_RPC') ?? envOrUndefined('INFURA_ARBITRUM_RPC_URL');
+
+  const infuraRpc = infuraRpcEnv
+    ? ensureInfuraProjectId(infuraRpcEnv, infuraProjectId)
+    : infuraProjectId
       ? `https://arbitrum-mainnet.infura.io/v3/${infuraProjectId}`
-      : undefined);
+      : undefined;
 
   const rpc = explicitRpc ?? infuraRpc;
 
