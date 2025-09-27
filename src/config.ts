@@ -31,4 +31,6 @@ export const DAILY_NAV_WBTC_CSV = 'public/data/nav_wbtc_daily.csv';
 export const TOKEN_PRICE_START_DATE = envOrUndefined('TOKEN_PRICE_START_DATE') ?? DEFAULT_START_DATE;
 export const PRICE_SERIES_START_DATE =
   envOrUndefined('PRICE_SERIES_START_DATE') ?? TOKEN_PRICE_START_DATE;
+export const CHAINLINK_BTC_USD_FEED =
+  envOrUndefined('CHAINLINK_BTC_USD_FEED') ?? '0x6ce185860a4963106506C203335A2910413708e9';
 

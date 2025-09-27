@@ -10,9 +10,6 @@ import { logger } from './utils/log.js';
 import { buildProviderSequence } from './utils/provider.js';
 
 const ABI = ['function tokenPrice() view returns (uint256)'];
-const MAX_BACKFILL_DAYS = 365;
-const SANITY_TOLERANCE = 0.1; // 10%
-
 interface DayPrice extends CSVRow {
   day: string;
   token_price_usd: string;
@@ -32,65 +29,17 @@ function addDays(date: Date, days: number): Date {
   return copy;
 }
 
-function median(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1] + sorted[mid]) / 2;
-  }
-  return sorted[mid];
-}
-
-function passesSanityCheck(history: DayPrice[], candidate: DayPrice): boolean {
-  const priorValues = history
-    .filter((row) => row.day < candidate.day)
-    .slice(-7)
-    .map((row) => Number(row.token_price_usd));
-  if (priorValues.length < 3) {
-    return true;
-  }
-  const med = median(priorValues);
-  if (med === 0) {
-    return true;
-  }
-  const value = Number(candidate.token_price_usd);
-  const deviation = Math.abs(value - med) / med;
-  return deviation <= SANITY_TOLERANCE;
-}
-
 function determineDaysToFetch(existing: DayPrice[]): string[] {
-  const existingSet = new Set(existing.map((row) => row.day));
   const now = new Date();
-  const endDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
+  const targetDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
   const configuredStart = parseDay(TOKEN_PRICE_START_DATE);
-  if (endDate.getTime() < configuredStart.getTime() || endDate.getTime() < 0) {
+  if (targetDate.getTime() < configuredStart.getTime() || targetDate.getTime() < 0) {
     return [];
   }
 
-  let startDate = configuredStart;
-  if (existing.length > 0) {
-    const lastKnownDay = parseDay(existing[existing.length - 1].day);
-    const dayAfterLast = addDays(lastKnownDay, 1);
-    if (dayAfterLast.getTime() > startDate.getTime()) {
-      startDate = dayAfterLast;
-    }
-  }
-
-  const missing: string[] = [];
-  for (let d = new Date(startDate.getTime()); d <= endDate; d = addDays(d, 1)) {
-    const day = isoDay(d);
-    if (!existingSet.has(day)) {
-      missing.push(day);
-    }
-  }
-
-  if (missing.length === 0) {
-    return [];
-  }
-  return missing.slice(0, MAX_BACKFILL_DAYS);
+  const targetDay = isoDay(targetDate);
+  const alreadyRecorded = existing.some((row) => row.day === targetDay);
+  return alreadyRecorded ? [] : [targetDay];
 }
 
 async function fetchTokenPrice(
@@ -123,7 +72,6 @@ async function main(): Promise<void> {
   const providers = buildProviderSequence();
   const contracts = providers.map(({ provider }) => new Contract(POOL_LOGIC_ADDRESS, ABI, provider));
   const blockHints: Array<number | null> = providers.map(() => null);
-  const history = [...existing];
   const newRows: DayPrice[] = [];
   for (const day of targets) {
     let fetched: number | null = null;
@@ -134,12 +82,8 @@ async function main(): Promise<void> {
         blockHints[i] = block;
         const value = await fetchTokenPrice(providers[i].provider, contracts[i], day, block);
         const candidate: DayPrice = { day, token_price_usd: value.toFixed(8) };
-        if (!passesSanityCheck([...history, ...newRows], candidate)) {
-          throw new Error('Sanity check failed (>10% deviation from rolling median)');
-        }
         fetched = value;
         newRows.push(candidate);
-        history.push(candidate);
         logger.info(`Fetched NAV ${value.toFixed(8)} for ${day} using provider ${i + 1} (${providers[i].url})`);
         break;
       } catch (error) {
