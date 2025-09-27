@@ -64,6 +64,7 @@ export COINMARKETCAP_API_KEY="your-api-key"
 
 Add these variables to a `.env` file or GitHub Secrets for CI runs.
 
+
 ## GitHub Actions
 
 One workflow lives under `.github/workflows/`:
