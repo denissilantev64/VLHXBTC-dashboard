@@ -30,6 +30,8 @@ jobs:
         env:
           ARBITRUM_RPC: ${{ secrets.ARBITRUM_RPC }}
           ARBITRUM_RPC_FALLBACKS: ${{ secrets.ARBITRUM_RPC_FALLBACKS }}
+          INFURA_ARBITRUM_RPC: ${{ secrets.INFURA_ARBITRUM_RPC }}
+          INFURA_ARBITRUM_RPC_FALLBACKS: ${{ secrets.INFURA_ARBITRUM_RPC_FALLBACKS }}
           COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
           HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
           HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}

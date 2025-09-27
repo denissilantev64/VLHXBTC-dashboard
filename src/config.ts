@@ -1,9 +1,4 @@
 export const POOL_LOGIC_ADDRESS = '0xf8fba992f763d8b9a8f47a4c130c1a352c24c6a9';
-const DEFAULT_ARBITRUM_RPC = 'https://arb1.arbitrum.io/rpc';
-const DEFAULT_ARBITRUM_FALLBACKS = [
-  'https://arbitrum.rpc.subquery.network/public',
-  'https://1rpc.io/arb',
-];
 const DEFAULT_START_DATE = '2025-07-23';
 
 function envOrUndefined(key: string): string | undefined {
@@ -15,15 +10,24 @@ function envOrUndefined(key: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-export const ARBITRUM_RPC = envOrUndefined('ARBITRUM_RPC') ?? DEFAULT_ARBITRUM_RPC;
-const fallbackEnv = envOrUndefined('ARBITRUM_RPC_FALLBACKS');
-const fallbackString =
-  fallbackEnv ?? (ARBITRUM_RPC === DEFAULT_ARBITRUM_RPC ? DEFAULT_ARBITRUM_FALLBACKS.join(',') : '');
-export const ARBITRUM_RPC_FALLBACKS = fallbackString
+function resolveRpcEndpoint(): string {
+  const rpc = envOrUndefined('ARBITRUM_RPC') ?? envOrUndefined('INFURA_ARBITRUM_RPC');
+  if (!rpc) {
+    throw new Error(
+      'Missing Arbitrum RPC endpoint. Set ARBITRUM_RPC or INFURA_ARBITRUM_RPC to a valid Infura URL.'
+    );
+  }
+  return rpc;
+}
 
+export const ARBITRUM_RPC = resolveRpcEndpoint();
+const fallbackEnv =
+  envOrUndefined('ARBITRUM_RPC_FALLBACKS') ?? envOrUndefined('INFURA_ARBITRUM_RPC_FALLBACKS');
+const fallbackString = fallbackEnv ?? '';
+export const ARBITRUM_RPC_FALLBACKS = fallbackString
   .split(',')
   .map((url) => url.trim())
-  .filter((url) => url.length > 0);
+  .filter((url) => url.length > 0 && url !== ARBITRUM_RPC);
 
 export const DAILY_NAV_CSV = 'public/data/nav_tokenprice_usd_daily.csv';
 export const DAILY_WBTC_CSV = 'public/data/wbtc_usd_daily.csv';
