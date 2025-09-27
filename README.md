@@ -46,15 +46,17 @@ All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
 ### Environment Configuration
 
-By default the exporter uses the public Arbitrum RPC. Override or add fallbacks with environment variables:
+The exporter requires a reliable Arbitrum RPC. Configure your Infura endpoint via environment variables:
 
 ```bash
-export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
-export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
+export ARBITRUM_RPC="https://arbitrum-mainnet.infura.io/v3/<your-key>"
+# optional comma separated fallbacks (e.g. second Infura project)
+export ARBITRUM_RPC_FALLBACKS="https://arbitrum-mainnet.infura.io/v3/<backup-key>"
 export COINMARKETCAP_API_KEY="your-api-key"
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints.
+You can also set `INFURA_ARBITRUM_RPC` / `INFURA_ARBITRUM_RPC_FALLBACKS` instead of `ARBITRUM_RPC` to avoid exposing the full
+URL in shell history. Add these variables to a `.env` file or GitHub Secrets for CI runs.
 
 ## GitHub Actions
 
