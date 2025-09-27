@@ -46,15 +46,23 @@ All CSV helpers guarantee sorted rows, unique keys, and a trailing newline.
 
 ### Environment Configuration
 
-By default the exporter uses the public Arbitrum RPC. Override or add fallbacks with environment variables:
+The exporter requires a reliable Arbitrum RPC. Configure your Infura endpoint via environment variables:
 
 ```bash
-export ARBITRUM_RPC="https://arb1.arbitrum.io/rpc"
-export ARBITRUM_RPC_FALLBACKS="https://arb1.arbitrum.io/rpc,https://arb-mainnet.g.alchemy.com/v2/demo"
+# Option 1: provide the full RPC URL
+export ARBITRUM_RPC="https://arbitrum-mainnet.infura.io/v3/<your-project-id>"
+
+# Option 2: provide the Infura project id/key and let the app build the URL
+export INFURA_KEY="<your-project-id>"
+# also supported: INFURA_PROJECT_ID / INFURA_API_KEY / INFURA_ARBITRUM_KEY
+
+# Option 3: store the fully qualified URL separately
+export INFURA_ARBITRUM_RPC_URL="https://arbitrum-mainnet.infura.io/v3/<your-project-id>"
+
 export COINMARKETCAP_API_KEY="your-api-key"
 ```
 
-Create a `.env` or add these variables in GitHub Secrets to use premium endpoints.
+Add these variables to a `.env` file or GitHub Secrets for CI runs.
 
 ## GitHub Actions
 
@@ -106,7 +114,7 @@ Adjust chart copy, colors, or fonts by editing `src/App.tsx`, `src/components/**
 ## Customization
 
 - **PoolLogic address** — update the `POOL_LOGIC_ADDRESS` constant in `src/config.ts`.
-- **RPC endpoints** — set `ARBITRUM_RPC` / `ARBITRUM_RPC_FALLBACKS` env vars.
+- **RPC endpoint** — set `ARBITRUM_RPC`, an Infura key via `INFURA_KEY`, or `INFURA_ARBITRUM_RPC_URL`.
 - **Chart branding** — tweak typography/colors in `src/styles/global.css` and chart components under `src/components/`.
 
 ## Repository Structure
