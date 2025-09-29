@@ -36,15 +36,29 @@ function addDays(date: Date, days: number): Date {
 
 function determineDaysToFetch(existing: DayPrice[]): string[] {
   const now = new Date();
-  const targetDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
+  const targetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const configuredStart = parseDay(PRICE_SERIES_START_DATE);
   if (targetDate.getTime() < configuredStart.getTime() || targetDate.getTime() < 0) {
     return [];
   }
 
-  const targetDay = isoDay(targetDate);
-  const alreadyRecorded = existing.some((row) => row.day === targetDay);
-  return alreadyRecorded ? [] : [targetDay];
+  const existingDays = new Set(existing.map((row) => row.day));
+  const lastRecorded = existing.length > 0 ? parseDay(existing[existing.length - 1].day) : undefined;
+  const firstCandidate = lastRecorded ? addDays(lastRecorded, 1) : configuredStart;
+  const startDate = firstCandidate.getTime() < configuredStart.getTime() ? configuredStart : firstCandidate;
+  if (startDate.getTime() > targetDate.getTime()) {
+    return [];
+  }
+
+  const days: string[] = [];
+  for (let cursor = startDate; cursor.getTime() <= targetDate.getTime(); cursor = addDays(cursor, 1)) {
+    const day = isoDay(cursor);
+    if (!existingDays.has(day)) {
+      days.push(day);
+    }
+  }
+
+  return days;
 }
 
 async function main(): Promise<void> {
