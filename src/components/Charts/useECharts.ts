@@ -104,35 +104,74 @@ const parseCssPixelValue = (value: string | null | undefined): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const computeAvailableWidth = (element: HTMLElement): number | null => {
-  if (typeof window === 'undefined' || !('getComputedStyle' in window)) {
-    return element.clientWidth || null;
-  }
-
-  let current: HTMLElement | null = element;
-  let width: number | null = null;
-
-  while (current) {
-    const clientWidth = current.clientWidth;
+const measureContentWidth = (element: HTMLElement): number | null => {
+  const measure = (node: HTMLElement): number | null => {
+    const clientWidth = node.clientWidth;
     if (clientWidth > 0) {
-      const styles = window.getComputedStyle(current);
-      const paddingLeft = parseCssPixelValue(styles.paddingLeft);
-      const paddingRight = parseCssPixelValue(styles.paddingRight);
-      const available = clientWidth - paddingLeft - paddingRight;
-
-      if (available > 0) {
-        width = width === null ? available : Math.min(width, available);
+      if (typeof window !== 'undefined' && 'getComputedStyle' in window) {
+        const styles = window.getComputedStyle(node);
+        const paddingLeft = parseCssPixelValue(styles.paddingLeft);
+        const paddingRight = parseCssPixelValue(styles.paddingRight);
+        const contentWidth = clientWidth - paddingLeft - paddingRight;
+        if (contentWidth > 0) {
+          return contentWidth;
+        }
+      } else {
+        return clientWidth;
       }
     }
 
+    const rectWidth = node.getBoundingClientRect?.().width ?? 0;
+    if (rectWidth > 0) {
+      if (typeof window !== 'undefined' && 'getComputedStyle' in window) {
+        const styles = window.getComputedStyle(node);
+        const paddingLeft = parseCssPixelValue(styles.paddingLeft);
+        const paddingRight = parseCssPixelValue(styles.paddingRight);
+        const contentWidth = rectWidth - paddingLeft - paddingRight;
+        if (contentWidth > 0) {
+          return contentWidth;
+        }
+      } else {
+        return rectWidth;
+      }
+    }
+
+    return null;
+  };
+
+  let current: HTMLElement | null = element;
+  while (current) {
+    const measured = measure(current);
+    if (measured && measured > 0) {
+      return measured;
+    }
     current = current.parentElement;
   }
 
-  return width;
-
+  return null;
 };
 
-const resizeChartToContainer = (chart: EChartsType | null): void => {
+const resolveWidthHint = (dom: HTMLElement, hint: number | null | undefined): number | null => {
+  if (hint && hint > 0) {
+    return hint;
+  }
+
+  const parent = dom.parentElement;
+  if (parent) {
+    const parentWidth = measureContentWidth(parent);
+    if (parentWidth && parentWidth > 0) {
+      return parentWidth;
+    }
+  }
+
+  return measureContentWidth(dom);
+};
+
+const resizeChartToContainer = (
+  chart: EChartsType | null,
+  widthHint?: number | null,
+): void => {
+
   if (!chart) {
     return;
   }
@@ -148,15 +187,21 @@ const resizeChartToContainer = (chart: EChartsType | null): void => {
   dom.style.removeProperty('height');
 
   const executeResize = () => {
-    const availableWidth = computeAvailableWidth(dom);
+    const previousWidth = dom.style.width;
+    dom.style.removeProperty('width');
 
-    if (availableWidth && availableWidth > 0) {
-      dom.style.width = `${availableWidth}px`;
-      chart.resize({ width: availableWidth });
+    const resolvedWidth = resolveWidthHint(dom, widthHint);
+
+    if (resolvedWidth && resolvedWidth > 0) {
+      const normalizedWidth = Math.max(0, Math.round(resolvedWidth));
+      dom.style.width = `${normalizedWidth}px`;
+      chart.resize({ width: normalizedWidth });
       return;
     }
 
-    dom.style.removeProperty('width');
+    if (previousWidth) {
+      dom.style.width = previousWidth;
+    }
     chart.resize();
   };
 
@@ -411,11 +456,15 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const chart = echarts.init(element);
     chartRef.current = chart;
 
-    const resizeChart = () => {
-      resizeChartToContainer(chart);
+    const resizeChart = (widthHint?: number | null) => {
+      resizeChartToContainer(chart, widthHint);
     };
 
-    window.addEventListener('resize', resizeChart);
+    const handleWindowResize = () => {
+      resizeChart();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
 
     const zr = chart.getZr();
 
@@ -729,8 +778,25 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
 
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(() => {
-        resizeChart();
+      const observer = new ResizeObserver((entries) => {
+        let widthHint: number | null = null;
+
+        for (const entry of entries) {
+          const target = entry.target;
+          if (!(target instanceof HTMLElement)) {
+            continue;
+          }
+          if (target === element) {
+            continue;
+          }
+
+          const candidateWidth = entry.contentRect?.width ?? 0;
+          if (candidateWidth > 0) {
+            widthHint = widthHint === null ? candidateWidth : Math.min(widthHint, candidateWidth);
+          }
+        }
+
+        resizeChart(widthHint);
       });
 
       const observed: HTMLElement[] = [];
@@ -750,7 +816,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     resizeChart();
 
     return () => {
-      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('resize', handleWindowResize);
 
 
       zr.off('touchstart', handlePointerActivate);
