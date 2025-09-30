@@ -95,6 +95,60 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const clampPositiveNumber = (value: number | null | undefined): number | null => {
+  if (typeof value !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  return value > 0 ? value : null;
+};
+
+const measureElementWidth = (element: HTMLElement | null): number | null => {
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const rectWidth = clampPositiveNumber(rect.width);
+  if (rectWidth !== null) {
+    return rectWidth;
+  }
+
+  return clampPositiveNumber(element.clientWidth);
+};
+
+const resizeChartToContainer = (chart: EChartsType | null): void => {
+  if (!chart) {
+    return;
+  }
+
+  const dom = chart.getDom?.();
+  let measuredWidth: number | null = null;
+
+  if (dom instanceof HTMLElement) {
+    measuredWidth =
+      measureElementWidth(dom.parentElement) ??
+      measureElementWidth(dom);
+
+    if (measuredWidth !== null) {
+      dom.style.width = `${measuredWidth}px`;
+    } else {
+      dom.style.width = '100%';
+    }
+
+    dom.style.maxWidth = '100%';
+    dom.style.removeProperty('height');
+  }
+
+  if (measuredWidth !== null) {
+    chart.resize({ width: measuredWidth });
+  } else {
+    chart.resize();
+  }
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -340,7 +394,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      resizeChartToContainer(chart);
     };
 
     window.addEventListener('resize', resizeChart);
@@ -740,12 +794,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    resizeChartToContainer(chart);
 
   }, [option]);
 
