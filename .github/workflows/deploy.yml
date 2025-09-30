@@ -37,7 +37,7 @@ jobs:
           NO_PROXY: ${{ secrets.NO_PROXY }}
           TOKEN_PRICE_START_DATE: ${{ secrets.TOKEN_PRICE_START_DATE }}
       - name: Commit refreshed datasets
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -48,7 +48,7 @@ jobs:
           fi
           git commit -m "chore: refresh datasets [skip ci]"
       - name: Push refreshed datasets
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || github.event_name == 'push'
         run: git push
       - name: Build static dashboard
         run: npm run build
