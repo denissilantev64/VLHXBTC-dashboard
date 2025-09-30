@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
     steps:
@@ -36,6 +36,20 @@ jobs:
           HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
           NO_PROXY: ${{ secrets.NO_PROXY }}
           TOKEN_PRICE_START_DATE: ${{ secrets.TOKEN_PRICE_START_DATE }}
+      - name: Commit refreshed datasets
+        if: github.event_name == 'schedule'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "No dataset changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: refresh datasets [skip ci]"
+      - name: Push refreshed datasets
+        if: github.event_name == 'schedule'
+        run: git push
       - name: Build static dashboard
         run: npm run build
       - name: Configure Pages
