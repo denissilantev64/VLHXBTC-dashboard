@@ -171,6 +171,7 @@ const resizeChartToContainer = (
   chart: EChartsType | null,
   widthHint?: number | null,
 ): void => {
+
   if (!chart) {
     return;
   }
