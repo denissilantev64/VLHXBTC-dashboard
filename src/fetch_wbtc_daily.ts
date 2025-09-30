@@ -61,6 +61,41 @@ function determineDaysToFetch(existing: DayPrice[]): string[] {
   return days;
 }
 
+function isNetworkConnectivityError(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+
+  const maybeError = error as { code?: unknown; message?: unknown; errors?: unknown; cause?: unknown };
+  const codes = new Set(['ENETUNREACH', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EHOSTUNREACH']);
+
+  if (typeof maybeError.code === 'string' && codes.has(maybeError.code)) {
+    return true;
+  }
+
+  if (typeof maybeError.message === 'string') {
+    for (const code of codes) {
+      if (maybeError.message.includes(code)) {
+        return true;
+      }
+    }
+  }
+
+  if (maybeError.errors && Symbol.iterator in Object(maybeError.errors)) {
+    for (const inner of maybeError.errors as Iterable<unknown>) {
+      if (isNetworkConnectivityError(inner)) {
+        return true;
+      }
+    }
+  }
+
+  if (maybeError.cause) {
+    return isNetworkConnectivityError(maybeError.cause);
+  }
+
+  return false;
+}
+
 async function main(): Promise<void> {
   const table = readCSV(DAILY_WBTC_CSV);
   const existing = table.rows.map((row) => ({ day: row.day, wbtc_usd: row.wbtc_usd })) as DayPrice[];
@@ -105,6 +140,15 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
+  if (isNetworkConnectivityError(error)) {
+    logger.warn(
+      `Skipping WBTC price fetch due to network connectivity issues: ${
+        (error as Error).message ?? String(error)
+      }`
+    );
+    return;
+  }
+
   logger.error(`fetch_wbtc_daily failed: ${(error as Error).stack ?? (error as Error).message}`);
   process.exitCode = 1;
 });
