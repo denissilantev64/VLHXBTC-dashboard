@@ -37,9 +37,19 @@ function determineDaysToFetch(existing: DayPrice[]): string[] {
     return [];
   }
 
-  const targetDay = isoDay(targetDate);
-  const alreadyRecorded = existing.some((row) => row.day === targetDay);
-  return alreadyRecorded ? [] : [targetDay];
+  const existingDays = new Set(existing.map((row) => row.day));
+  const missing: string[] = [];
+  for (
+    let cursor = new Date(configuredStart.getTime());
+    cursor.getTime() <= targetDate.getTime();
+    cursor = addDays(cursor, 1)
+  ) {
+    const day = isoDay(cursor);
+    if (!existingDays.has(day)) {
+      missing.push(day);
+    }
+  }
+  return missing;
 }
 
 async function fetchTokenPrice(
