@@ -31,15 +31,56 @@ function addDays(date: Date, days: number): Date {
 
 function determineDaysToFetch(existing: DayPrice[]): string[] {
   const now = new Date();
-  const targetDate = addDays(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())), -1);
+  const targetDate = addDays(
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
+    -1,
+  );
   const configuredStart = parseDay(TOKEN_PRICE_START_DATE);
-  if (targetDate.getTime() < configuredStart.getTime() || targetDate.getTime() < 0) {
+  const startTime = configuredStart.getTime();
+  const targetTime = targetDate.getTime();
+
+  if (!Number.isFinite(startTime)) {
+    throw new Error(`Invalid TOKEN_PRICE_START_DATE: ${TOKEN_PRICE_START_DATE}`);
+  }
+  if (targetTime < startTime || targetTime < 0) {
     return [];
   }
 
-  const targetDay = isoDay(targetDate);
-  const alreadyRecorded = existing.some((row) => row.day === targetDay);
-  return alreadyRecorded ? [] : [targetDay];
+  const missing: string[] = [];
+  let cursor = new Date(startTime);
+
+  for (const row of existing) {
+    const dayValue = row.day;
+    if (!dayValue) {
+      continue;
+    }
+
+    const dayDate = parseDay(dayValue);
+    const dayTime = dayDate.getTime();
+    if (!Number.isFinite(dayTime) || dayTime < startTime) {
+      continue;
+    }
+
+    while (cursor.getTime() < dayTime && cursor.getTime() <= targetTime) {
+      missing.push(isoDay(cursor));
+      cursor = addDays(cursor, 1);
+    }
+
+    if (cursor.getTime() === dayTime) {
+      cursor = addDays(cursor, 1);
+    }
+
+    if (cursor.getTime() > targetTime) {
+      return missing;
+    }
+  }
+
+  while (cursor.getTime() <= targetTime) {
+    missing.push(isoDay(cursor));
+    cursor = addDays(cursor, 1);
+  }
+
+  return missing;
 }
 
 async function fetchTokenPrice(
