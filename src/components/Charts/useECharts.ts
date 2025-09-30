@@ -129,6 +129,7 @@ const computeAvailableWidth = (element: HTMLElement): number | null => {
   }
 
   return width;
+
 };
 
 const resizeChartToContainer = (chart: EChartsType | null): void => {
