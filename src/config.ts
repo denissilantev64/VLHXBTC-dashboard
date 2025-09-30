@@ -43,13 +43,15 @@ function resolveRpcEndpoint(): string {
 
   const rpc = explicitRpc ?? infuraRpc;
 
-  if (!rpc) {
-    throw new Error(
-      'Missing Arbitrum RPC endpoint. Provide ARBITRUM_RPC or set an Infura key/URL.'
-    );
+  if (rpc) {
+    return rpc;
   }
 
-  return rpc;
+  // Fall back to the public Arbitrum RPC so that static builds can
+  // succeed even when no environment variables are configured. The
+  // public endpoint has lower rate limits, but it is sufficient for the
+  // build step where we just need to render the static site.
+  return 'https://arb1.arbitrum.io/rpc';
 }
 
 export const ARBITRUM_RPC = resolveRpcEndpoint();
