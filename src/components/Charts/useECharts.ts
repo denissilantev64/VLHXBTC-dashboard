@@ -95,18 +95,58 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const clampPositiveNumber = (value: number | null | undefined): number | null => {
+  if (typeof value !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  return value > 0 ? value : null;
+};
+
+const measureElementWidth = (element: HTMLElement | null): number | null => {
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const rectWidth = clampPositiveNumber(rect.width);
+  if (rectWidth !== null) {
+    return rectWidth;
+  }
+
+  return clampPositiveNumber(element.clientWidth);
+};
+
 const resizeChartToContainer = (chart: EChartsType | null): void => {
   if (!chart) {
     return;
   }
 
   const dom = chart.getDom?.();
+  let measuredWidth: number | null = null;
+
   if (dom instanceof HTMLElement) {
-    dom.style.removeProperty('width');
+    measuredWidth =
+      measureElementWidth(dom.parentElement) ??
+      measureElementWidth(dom);
+
+    if (measuredWidth !== null) {
+      dom.style.width = `${measuredWidth}px`;
+    } else {
+      dom.style.width = '100%';
+    }
+
+    dom.style.maxWidth = '100%';
     dom.style.removeProperty('height');
   }
 
-  chart.resize();
+  if (measuredWidth !== null) {
+    chart.resize({ width: measuredWidth });
+  } else {
+    chart.resize();
+  }
 };
 
 type TooltipPositioner = (
