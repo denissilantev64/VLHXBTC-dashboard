@@ -99,6 +99,7 @@ const toLength = (value: string | null | undefined): number => {
   if (!value) {
     return 0;
   }
+
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
@@ -748,8 +749,25 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
 
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(() => {
-        resizeChart();
+      const observer = new ResizeObserver((entries) => {
+        let widthHint: number | null = null;
+
+        for (const entry of entries) {
+          const target = entry.target;
+          if (!(target instanceof HTMLElement)) {
+            continue;
+          }
+          if (target === element) {
+            continue;
+          }
+
+          const candidateWidth = entry.contentRect?.width ?? 0;
+          if (candidateWidth > 0) {
+            widthHint = widthHint === null ? candidateWidth : Math.min(widthHint, candidateWidth);
+          }
+        }
+
+        resizeChart(widthHint);
       });
 
       const observed: HTMLElement[] = [];
