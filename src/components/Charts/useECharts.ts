@@ -95,6 +95,77 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const parseCssPixelValue = (value: string | null | undefined): number => {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const computeAvailableWidth = (element: HTMLElement): number | null => {
+  if (typeof window === 'undefined' || !('getComputedStyle' in window)) {
+    return element.clientWidth || null;
+  }
+
+  let current: HTMLElement | null = element;
+  let width: number | null = null;
+
+  while (current) {
+    const clientWidth = current.clientWidth;
+    if (clientWidth > 0) {
+      const styles = window.getComputedStyle(current);
+      const paddingLeft = parseCssPixelValue(styles.paddingLeft);
+      const paddingRight = parseCssPixelValue(styles.paddingRight);
+      const available = clientWidth - paddingLeft - paddingRight;
+
+      if (available > 0) {
+        width = width === null ? available : Math.min(width, available);
+      }
+    }
+
+    current = current.parentElement;
+  }
+
+  return width;
+};
+
+const resizeChartToContainer = (chart: EChartsType | null): void => {
+  if (!chart) {
+    return;
+  }
+
+  const dom = chart.getDom?.();
+
+  if (!(dom instanceof HTMLElement)) {
+    chart.resize();
+    return;
+  }
+
+  dom.style.maxWidth = '100%';
+  dom.style.removeProperty('height');
+
+  const executeResize = () => {
+    const availableWidth = computeAvailableWidth(dom);
+
+    if (availableWidth && availableWidth > 0) {
+      dom.style.width = `${availableWidth}px`;
+      chart.resize({ width: availableWidth });
+      return;
+    }
+
+    dom.style.removeProperty('width');
+    chart.resize();
+  };
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    window.requestAnimationFrame(executeResize);
+  } else {
+    executeResize();
+  }
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -340,7 +411,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      resizeChartToContainer(chart);
     };
 
     window.addEventListener('resize', resizeChart);
@@ -740,12 +811,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    resizeChartToContainer(chart);
 
   }, [option]);
 
