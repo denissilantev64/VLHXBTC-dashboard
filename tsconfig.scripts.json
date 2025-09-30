@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": ".tsbuild",
+    "noEmit": false,
+    "composite": false
+  },
+  "include": [
+    "src/config.ts",
+    "src/export_token_price_daily.ts",
+    "src/fetch_wbtc_daily.ts",
+    "src/build_nav_wbtc_daily.ts",
+    "src/check_prod_data.ts",
+    "src/utils/**/*.ts",
+    "src/services/**/*.ts",
+    "src/types/**/*.ts"
+  ],
+  "exclude": [
+    "src/components/**/*",
+    "src/styles/**/*",
+    "src/App.tsx",
+    "src/main.tsx",
+    "src/theme.ts",
+    "src/i18n.ts"
+  ]
+}
