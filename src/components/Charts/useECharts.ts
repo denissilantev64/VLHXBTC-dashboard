@@ -95,6 +95,115 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const parsePixelValue = (raw: string | null | undefined): number => {
+  if (!raw) {
+    return 0;
+  }
+
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+};
+
+const measureAvailableContentWidth = (element: HTMLElement): number | null => {
+  if (typeof window === 'undefined' || !element.isConnected) {
+    return null;
+  }
+
+  let node: HTMLElement | null = element;
+  let constrainedWidth: number | null = null;
+
+  while (node) {
+    const rect = node.getBoundingClientRect();
+    if (!Number.isFinite(rect.width) || rect.width <= 0) {
+      node = node.parentElement;
+      continue;
+    }
+
+    let availableWidth = rect.width;
+
+    if (typeof window.getComputedStyle === 'function') {
+      const styles = window.getComputedStyle(node);
+      availableWidth -= parsePixelValue(styles.paddingLeft);
+      availableWidth -= parsePixelValue(styles.paddingRight);
+    }
+
+    if (availableWidth > 0) {
+      availableWidth = Math.floor(availableWidth);
+      constrainedWidth =
+        constrainedWidth === null
+          ? availableWidth
+          : Math.min(constrainedWidth, availableWidth);
+    }
+
+    node = node.parentElement;
+  }
+
+  return constrainedWidth && constrainedWidth > 0 ? constrainedWidth : null;
+};
+
+const scheduleResizeChartToContainer = (
+  chart: EChartsType | null,
+  pendingFrameRef: MutableRefObject<number | null>,
+): void => {
+  if (!chart) {
+    return;
+  }
+
+  const scheduleResize = () => {
+    pendingFrameRef.current = null;
+
+    const dom = chart.getDom?.();
+
+    if (!(dom instanceof HTMLElement)) {
+      chart.resize();
+      return;
+    }
+
+    dom.style.removeProperty('height');
+    dom.style.removeProperty('width');
+    dom.style.maxWidth = '100%';
+    dom.style.setProperty('minWidth', '0px');
+
+    const normalize = (value: number | undefined | null): number | null => {
+      if (typeof value !== 'number') {
+        return null;
+      }
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+      if (value <= 0) {
+        return null;
+      }
+      return Math.floor(value);
+    };
+
+    const measuredWidth = measureAvailableContentWidth(dom);
+    const rectWidth = dom.getBoundingClientRect().width;
+    const clientWidth = dom.clientWidth;
+
+    const targetWidth =
+      normalize(measuredWidth) ?? normalize(rectWidth) ?? normalize(clientWidth);
+
+    if (targetWidth !== null) {
+      chart.resize({ width: targetWidth });
+    } else {
+      chart.resize();
+    }
+    dom.style.removeProperty('height');
+    dom.style.maxWidth = '100%';
+    dom.style.setProperty('minWidth', '0px');
+  };
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    if (pendingFrameRef.current !== null) {
+      window.cancelAnimationFrame(pendingFrameRef.current);
+    }
+    pendingFrameRef.current = window.requestAnimationFrame(scheduleResize);
+  } else {
+    scheduleResize();
+  }
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -322,6 +431,7 @@ function enrichTooltipOption(
 export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLDivElement | null> {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<EChartsType | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const observedElementsRef = useRef<HTMLElement[]>([]);
   const hideTooltipTimeoutRef = useRef<number | null>(null);
@@ -340,10 +450,14 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      scheduleResizeChartToContainer(chart, resizeFrameRef);
     };
 
-    window.addEventListener('resize', resizeChart);
+    const handleWindowResize = () => {
+      resizeChart();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
 
     const zr = chart.getZr();
 
@@ -661,16 +775,16 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
         resizeChart();
       });
 
-      const observed: HTMLElement[] = [];
+      const observedElements: HTMLElement[] = [];
       let node: HTMLElement | null = element;
       while (node) {
         observer.observe(node);
-        observed.push(node);
+        observedElements.push(node);
         node = node.parentElement;
       }
 
       resizeObserverRef.current = observer;
-      observedElementsRef.current = observed;
+      observedElementsRef.current = observedElements;
     } else {
       resizeChart();
     }
@@ -678,7 +792,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     resizeChart();
 
     return () => {
-      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('resize', handleWindowResize);
 
 
       zr.off('touchstart', handlePointerActivate);
@@ -714,6 +828,11 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
       resizeObserverRef.current = null;
       observedElementsRef.current = [];
 
+      if (resizeFrameRef.current !== null && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
+      resizeFrameRef.current = null;
+
       chart.dispose();
       chartRef.current = null;
     };
@@ -740,12 +859,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    scheduleResizeChartToContainer(chart, resizeFrameRef);
 
   }, [option]);
 
