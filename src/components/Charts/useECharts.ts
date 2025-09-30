@@ -95,56 +95,60 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
-const toLength = (value: string | null | undefined): number => {
+const parsePaddingValue = (value: string | null | undefined): number => {
   if (!value) {
     return 0;
   }
 
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  const numeric = Number.parseFloat(value);
+  return Number.isFinite(numeric) ? Math.max(numeric, 0) : 0;
 };
 
-const measureContentWidth = (element: HTMLElement): number => {
-  const rectWidth = element.getBoundingClientRect().width;
-  if (typeof window === 'undefined') {
-    return rectWidth;
+const getContentWidth = (element: HTMLElement): number | null => {
+  let width = element.clientWidth;
+
+  if (!Number.isFinite(width) || width <= 0) {
+    const rectWidth = element.getBoundingClientRect().width;
+    width = Number.isFinite(rectWidth) ? rectWidth : 0;
   }
 
-  const styles = window.getComputedStyle(element);
-  const paddingLeft = toLength(styles.paddingLeft);
-  const paddingRight = toLength(styles.paddingRight);
-
-  const clientWidth = element.clientWidth;
-  const contentWidth = clientWidth - paddingLeft - paddingRight;
-
-  if (contentWidth > 0) {
-    return contentWidth;
+  if (!Number.isFinite(width) || width <= 0) {
+    return null;
   }
 
-  const borderLeft = toLength(styles.borderLeftWidth);
-  const borderRight = toLength(styles.borderRightWidth);
-  const fallback = rectWidth - paddingLeft - paddingRight - borderLeft - borderRight;
-  return fallback > 0 ? fallback : rectWidth;
+  if (typeof window !== 'undefined' && window.getComputedStyle) {
+    const style = window.getComputedStyle(element);
+    const paddingLeft = parsePaddingValue(style?.paddingLeft ?? null);
+    const paddingRight = parsePaddingValue(style?.paddingRight ?? null);
+    const adjusted = width - paddingLeft - paddingRight;
+    if (Number.isFinite(adjusted) && adjusted > 0) {
+      return adjusted;
+    }
+  }
+
+  return width > 0 ? width : null;
 };
 
-const findAvailableWidth = (element: HTMLElement): number => {
-  const widths: number[] = [];
-  let node: HTMLElement | null = element;
+const findAvailableWidth = (dom: HTMLElement): number | null => {
+  let widthHint: number | null = null;
+  let node = dom.parentElement;
 
   while (node) {
-    const width = measureContentWidth(node);
-    if (width > 0) {
-      widths.push(width);
+    const candidate = getContentWidth(node);
+    if (candidate !== null) {
+      widthHint = widthHint === null ? candidate : Math.min(widthHint, candidate);
     }
     node = node.parentElement;
   }
-
-  if (widths.length === 0) {
-    const rect = element.getBoundingClientRect();
-    return rect.width;
+  
+  if (widthHint === null) {
+    const fallback = getContentWidth(dom);
+    if (fallback !== null) {
+      widthHint = fallback;
+    }
   }
 
-  return widths.reduce((minWidth, width) => Math.min(minWidth, width), widths[0]);
+  return widthHint;
 };
 
 const resizeChartToContainer = (chart: EChartsType | null): void => {
@@ -164,11 +168,11 @@ const resizeChartToContainer = (chart: EChartsType | null): void => {
   dom.style.removeProperty('width');
 
   const performResize = () => {
-    const availableWidth = findAvailableWidth(dom);
-
-    if (availableWidth > 0) {
-      dom.style.width = `${availableWidth}px`;
-      chart.resize({ width: availableWidth });
+    const widthHint = findAvailableWidth(dom);
+    if (widthHint !== null && Number.isFinite(widthHint) && widthHint > 0) {
+      const roundedWidth = Math.max(Math.round(widthHint), 1);
+      dom.style.width = `${roundedWidth}px`;
+      chart.resize({ width: roundedWidth });
       return;
     }
 
