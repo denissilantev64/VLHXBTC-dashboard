@@ -95,6 +95,20 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const resizeChartToContainer = (chart: EChartsType | null): void => {
+  if (!chart) {
+    return;
+  }
+
+  const dom = chart.getDom?.();
+  if (dom instanceof HTMLElement) {
+    dom.style.removeProperty('width');
+    dom.style.removeProperty('height');
+  }
+
+  chart.resize();
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -340,7 +354,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      resizeChartToContainer(chart);
     };
 
     window.addEventListener('resize', resizeChart);
@@ -740,12 +754,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    resizeChartToContainer(chart);
 
   }, [option]);
 
