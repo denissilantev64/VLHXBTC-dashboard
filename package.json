@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc",
+    "build": "tsc && node dist/export_token_price_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_wbtc_daily.js && vite build",
     "preview": "vite preview",
-    "daily": "tsc && node dist/export_token_price_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_wbtc_daily.js"
+    "daily": "tsc && node dist/export_token_price_daily.js && node dist/fetch_wbtc_daily.js && node dist/build_nav_wbtc_daily.js",
+    "check:prod-data": "tsc && node dist/check_prod_data.js"
   },
   "dependencies": {
     "echarts": "^6.0.0",

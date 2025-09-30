@@ -140,7 +140,7 @@ const findAvailableWidth = (dom: HTMLElement): number | null => {
     }
     node = node.parentElement;
   }
-
+  
   if (widthHint === null) {
     const fallback = getContentWidth(dom);
     if (fallback !== null) {
@@ -753,8 +753,25 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
 
 
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(() => {
-        resizeChart();
+      const observer = new ResizeObserver((entries) => {
+        let widthHint: number | null = null;
+
+        for (const entry of entries) {
+          const target = entry.target;
+          if (!(target instanceof HTMLElement)) {
+            continue;
+          }
+          if (target === element) {
+            continue;
+          }
+
+          const candidateWidth = entry.contentRect?.width ?? 0;
+          if (candidateWidth > 0) {
+            widthHint = widthHint === null ? candidateWidth : Math.min(widthHint, candidateWidth);
+          }
+        }
+
+        resizeChart(widthHint);
       });
 
       const observed: HTMLElement[] = [];
