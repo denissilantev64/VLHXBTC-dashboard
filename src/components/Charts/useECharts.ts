@@ -95,6 +95,64 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const measureContainerWidth = (dom: HTMLElement): number | null => {
+  const normalize = (value: number): number | null => {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    if (value <= 0) {
+      return null;
+    }
+    return Math.floor(value);
+  };
+
+  let candidateWidth: number | null = null;
+
+  let ancestor: HTMLElement | null = dom.parentElement;
+  while (ancestor) {
+    const width =
+      normalize(ancestor.clientWidth) ?? normalize(ancestor.getBoundingClientRect().width);
+    if (width !== null) {
+      candidateWidth = candidateWidth === null ? width : Math.min(candidateWidth, width);
+    }
+    ancestor = ancestor.parentElement;
+  }
+
+  if (candidateWidth !== null) {
+    return candidateWidth;
+  }
+
+  return normalize(dom.clientWidth) ?? normalize(dom.getBoundingClientRect().width);
+};
+
+const resizeChartToContainer = (chart: EChartsType | null): void => {
+  if (!chart) {
+    return;
+  }
+
+  const dom = chart.getDom?.();
+
+  if (!(dom instanceof HTMLElement)) {
+    chart.resize();
+    return;
+  }
+
+  dom.style.maxWidth = '100%';
+  dom.style.removeProperty('height');
+  dom.style.removeProperty('width');
+
+  const widthHint = measureContainerWidth(dom);
+
+  if (widthHint && Number.isFinite(widthHint) && widthHint > 0) {
+    chart.resize({ width: widthHint });
+  } else {
+    chart.resize();
+  }
+
+  dom.style.maxWidth = '100%';
+  dom.style.removeProperty('height');
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -340,10 +398,14 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      resizeChartToContainer(chart);
     };
 
-    window.addEventListener('resize', resizeChart);
+    const handleWindowResize = () => {
+      resizeChart();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
 
     const zr = chart.getZr();
 
@@ -661,16 +723,16 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
         resizeChart();
       });
 
-      const observed: HTMLElement[] = [];
+      const observedElements: HTMLElement[] = [];
       let node: HTMLElement | null = element;
       while (node) {
         observer.observe(node);
-        observed.push(node);
+        observedElements.push(node);
         node = node.parentElement;
       }
 
       resizeObserverRef.current = observer;
-      observedElementsRef.current = observed;
+      observedElementsRef.current = observedElements;
     } else {
       resizeChart();
     }
@@ -678,7 +740,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     resizeChart();
 
     return () => {
-      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('resize', handleWindowResize);
 
 
       zr.off('touchstart', handlePointerActivate);
@@ -740,12 +802,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    resizeChartToContainer(chart);
 
   }, [option]);
 
