@@ -95,6 +95,98 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
+const parsePaddingValue = (value: string | null | undefined): number => {
+  if (!value) {
+    return 0;
+  }
+
+  const numeric = Number.parseFloat(value);
+  return Number.isFinite(numeric) ? Math.max(numeric, 0) : 0;
+};
+
+const getContentWidth = (element: HTMLElement): number | null => {
+  let width = element.clientWidth;
+
+  if (!Number.isFinite(width) || width <= 0) {
+    const rectWidth = element.getBoundingClientRect().width;
+    width = Number.isFinite(rectWidth) ? rectWidth : 0;
+  }
+
+  if (!Number.isFinite(width) || width <= 0) {
+    return null;
+  }
+
+  if (typeof window !== 'undefined' && window.getComputedStyle) {
+    const style = window.getComputedStyle(element);
+    const paddingLeft = parsePaddingValue(style?.paddingLeft ?? null);
+    const paddingRight = parsePaddingValue(style?.paddingRight ?? null);
+    const adjusted = width - paddingLeft - paddingRight;
+    if (Number.isFinite(adjusted) && adjusted > 0) {
+      return adjusted;
+    }
+  }
+
+  return width > 0 ? width : null;
+};
+
+const findAvailableWidth = (dom: HTMLElement): number | null => {
+  let widthHint: number | null = null;
+  let node = dom.parentElement;
+
+  while (node) {
+    const candidate = getContentWidth(node);
+    if (candidate !== null) {
+      widthHint = widthHint === null ? candidate : Math.min(widthHint, candidate);
+    }
+    node = node.parentElement;
+  }
+
+  if (widthHint === null) {
+    const fallback = getContentWidth(dom);
+    if (fallback !== null) {
+      widthHint = fallback;
+    }
+  }
+
+  return widthHint;
+};
+
+const resizeChartToContainer = (chart: EChartsType | null): void => {
+  if (!chart) {
+    return;
+  }
+
+  const dom = chart.getDom?.();
+
+  if (!(dom instanceof HTMLElement)) {
+    chart.resize();
+    return;
+  }
+
+  dom.style.maxWidth = '100%';
+  dom.style.removeProperty('height');
+  dom.style.removeProperty('width');
+
+  const performResize = () => {
+    const widthHint = findAvailableWidth(dom);
+    if (widthHint !== null && Number.isFinite(widthHint) && widthHint > 0) {
+      const roundedWidth = Math.max(Math.round(widthHint), 1);
+      dom.style.width = `${roundedWidth}px`;
+      chart.resize({ width: roundedWidth });
+      return;
+    }
+
+    dom.style.removeProperty('width');
+    chart.resize();
+  };
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    window.requestAnimationFrame(performResize);
+  } else {
+    performResize();
+  }
+};
+
 type TooltipPositioner = (
   point: TooltipPoint,
   params: unknown,
@@ -340,10 +432,14 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     chartRef.current = chart;
 
     const resizeChart = () => {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
+      resizeChartToContainer(chart);
     };
 
-    window.addEventListener('resize', resizeChart);
+    const handleWindowResize = () => {
+      resizeChart();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
 
     const zr = chart.getZr();
 
@@ -678,7 +774,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     resizeChart();
 
     return () => {
-      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('resize', handleWindowResize);
 
 
       zr.off('touchstart', handlePointerActivate);
@@ -740,12 +836,7 @@ export function useECharts(option: EChartsOption | null): MutableRefObject<HTMLD
     const enrichedOption: EChartsOption = { ...option, tooltip };
 
     chart.setOption(enrichedOption, true);
-    const element = containerRef.current;
-    if (element) {
-      chart.resize({ width: element.clientWidth, height: element.clientHeight });
-    } else {
-      chart.resize();
-    }
+    resizeChartToContainer(chart);
 
   }, [option]);
 
