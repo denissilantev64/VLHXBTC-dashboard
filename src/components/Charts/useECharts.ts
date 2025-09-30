@@ -95,28 +95,41 @@ const extractPointFromEntry = (entry: unknown): ExtractedPoint => {
   return result;
 };
 
-const clampPositiveNumber = (value: number | null | undefined): number | null => {
-  if (typeof value !== 'number') {
-    return null;
+const parseCssPixelValue = (value: string | null | undefined): number => {
+  if (!value) {
+    return 0;
   }
-  if (!Number.isFinite(value)) {
-    return null;
-  }
-  return value > 0 ? value : null;
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const measureElementWidth = (element: HTMLElement | null): number | null => {
-  if (!element) {
-    return null;
+const computeAvailableWidth = (element: HTMLElement): number | null => {
+  if (typeof window === 'undefined' || !('getComputedStyle' in window)) {
+    return element.clientWidth || null;
   }
 
-  const rect = element.getBoundingClientRect();
-  const rectWidth = clampPositiveNumber(rect.width);
-  if (rectWidth !== null) {
-    return rectWidth;
+  let current: HTMLElement | null = element;
+  let width: number | null = null;
+
+  while (current) {
+    const clientWidth = current.clientWidth;
+    if (clientWidth > 0) {
+      const styles = window.getComputedStyle(current);
+      const paddingLeft = parseCssPixelValue(styles.paddingLeft);
+      const paddingRight = parseCssPixelValue(styles.paddingRight);
+      const available = clientWidth - paddingLeft - paddingRight;
+
+      if (available > 0) {
+        width = width === null ? available : Math.min(width, available);
+      }
+    }
+
+    current = current.parentElement;
   }
 
-  return clampPositiveNumber(element.clientWidth);
+  return width;
+
 };
 
 const resizeChartToContainer = (chart: EChartsType | null): void => {
@@ -125,27 +138,32 @@ const resizeChartToContainer = (chart: EChartsType | null): void => {
   }
 
   const dom = chart.getDom?.();
-  let measuredWidth: number | null = null;
 
-  if (dom instanceof HTMLElement) {
-    measuredWidth =
-      measureElementWidth(dom.parentElement) ??
-      measureElementWidth(dom);
-
-    if (measuredWidth !== null) {
-      dom.style.width = `${measuredWidth}px`;
-    } else {
-      dom.style.width = '100%';
-    }
-
-    dom.style.maxWidth = '100%';
-    dom.style.removeProperty('height');
+  if (!(dom instanceof HTMLElement)) {
+    chart.resize();
+    return;
   }
 
-  if (measuredWidth !== null) {
-    chart.resize({ width: measuredWidth });
-  } else {
+  dom.style.maxWidth = '100%';
+  dom.style.removeProperty('height');
+
+  const executeResize = () => {
+    const availableWidth = computeAvailableWidth(dom);
+
+    if (availableWidth && availableWidth > 0) {
+      dom.style.width = `${availableWidth}px`;
+      chart.resize({ width: availableWidth });
+      return;
+    }
+
+    dom.style.removeProperty('width');
     chart.resize();
+  };
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    window.requestAnimationFrame(executeResize);
+  } else {
+    executeResize();
   }
 };
 
