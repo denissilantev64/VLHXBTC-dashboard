@@ -145,7 +145,6 @@ const scheduleResizeChartToContainer = (
   chart: EChartsType | null,
   pendingFrameRef: MutableRefObject<number | null>,
 ): void => {
-
   if (!chart) {
     return;
   }
