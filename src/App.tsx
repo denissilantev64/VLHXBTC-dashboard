@@ -23,6 +23,7 @@ export function App(): JSX.Element {
   const [language, setLanguage] = useState<Language>(defaultLanguage);
   const [range, setRange] = useState<RangeKey>('ALL');
   const [data, setData] = useState<DailyEntry[]>([]);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,7 +31,8 @@ export function App(): JSX.Element {
       try {
         const dataset = await fetchDashboardData();
         if (isMounted) {
-          setData(dataset);
+          setData(dataset.entries);
+          setLastUpdatedAt(dataset.lastUpdatedAt);
         }
       } catch (error) {
         console.error('Failed to load dashboard data', error);
@@ -60,7 +62,7 @@ export function App(): JSX.Element {
   const filteredData = useMemo(() => filterByRange(range, data), [range, data]);
   const stats = useMemo(() => computeDashboardStats(filteredData), [filteredData]);
   const lastUpdatedEntry = data.length > 0 ? data[data.length - 1] : undefined;
-  const lastUpdatedDate = lastUpdatedEntry?.date;
+  const lastUpdatedDate = lastUpdatedAt ?? lastUpdatedEntry?.date;
   const lastUpdatedIso = lastUpdatedDate?.toISOString();
   const lastUpdatedLabel = lastUpdatedDate
     ? new Intl.DateTimeFormat(locale, {
