@@ -70,13 +70,23 @@ function resolveAssetPath(path: string): string {
   return `${normalizedBase}${normalizedPath}`;
 }
 
-async function fetchCsv(path: string): Promise<string> {
+interface CsvResponse {
+  text: string;
+  lastModified: Date | null;
+}
+
+async function fetchCsv(path: string): Promise<CsvResponse> {
   const url = resolveAssetPath(path);
   const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }
-  return response.text();
+  const lastModifiedHeader = response.headers.get('last-modified');
+  const lastModified = lastModifiedHeader ? new Date(lastModifiedHeader) : null;
+  const isValidLastModified =
+    lastModified instanceof Date && !Number.isNaN(lastModified.getTime()) ? lastModified : null;
+  const text = await response.text();
+  return { text, lastModified: isValidLastModified };
 }
 
 function parseCsv(text: string): Record<string, string>[] {
@@ -127,13 +137,31 @@ function toDailyEntries(rows: Record<string, string>[], wbtcMap: Map<string, num
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
-export async function fetchDashboardData(): Promise<DailyEntry[]> {
-  const [navText, wbtcText] = await Promise.all([
+export interface DashboardDataResponse {
+  entries: DailyEntry[];
+  lastUpdatedAt: Date | null;
+}
+
+function mostRecentDate(dates: (Date | null | undefined)[]): Date | null {
+  let latest: Date | null = null;
+  for (const current of dates) {
+    if (!(current instanceof Date) || Number.isNaN(current.getTime())) {
+      continue;
+    }
+    if (!latest || current.getTime() > latest.getTime()) {
+      latest = current;
+    }
+  }
+  return latest;
+}
+
+export async function fetchDashboardData(): Promise<DashboardDataResponse> {
+  const [navResponse, wbtcResponse] = await Promise.all([
     fetchCsv(DATA_SOURCES.nav),
     fetchCsv(DATA_SOURCES.wbtc),
   ]);
 
-  const wbtcRows = parseCsv(wbtcText);
+  const wbtcRows = parseCsv(wbtcResponse.text);
   const wbtcMap = new Map<string, number>();
   wbtcRows.forEach((row) => {
     if (!row.day) {
@@ -142,8 +170,11 @@ export async function fetchDashboardData(): Promise<DailyEntry[]> {
     wbtcMap.set(row.day, parseNumber(row.wbtc_usd));
   });
 
-  const navRows = parseCsv(navText);
-  return toDailyEntries(navRows, wbtcMap);
+  const navRows = parseCsv(navResponse.text);
+  const entries = toDailyEntries(navRows, wbtcMap);
+  const lastUpdatedAt = mostRecentDate([navResponse.lastModified, wbtcResponse.lastModified]);
+
+  return { entries, lastUpdatedAt };
 }
 
 export function filterByRange(range: RangeKey, dataset: DailyEntry[]): DailyEntry[] {
