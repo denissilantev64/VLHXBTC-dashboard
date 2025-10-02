@@ -31,10 +31,7 @@ function addDays(date: Date, days: number): Date {
 
 function determineDaysToFetch(existing: DayPrice[]): string[] {
   const now = new Date();
-  const targetDate = addDays(
-    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
-    -1,
-  );
+  const targetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const configuredStart = parseDay(TOKEN_PRICE_START_DATE);
   const startTime = configuredStart.getTime();
   const targetTime = targetDate.getTime();

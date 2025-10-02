@@ -9,6 +9,7 @@ import { blockAtEndOfDayUTC } from './utils/arb.js';
 import { readCSV, upsertRows, type CSVRow } from './utils/csv.js';
 import { logger } from './utils/log.js';
 import { createProvider } from './utils/provider.js';
+import { fetchCoinGeckoDaily, fetchCryptoCompareDaily, type DailyPricePoint } from './utils/prices.js';
 
 const FEED_ABI = [
   'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
@@ -106,27 +107,63 @@ async function main(): Promise<void> {
     return;
   }
 
+  const newRows: DayPrice[] = [];
+  const successfulDays = new Set<string>();
   const provider = createProvider(ARBITRUM_RPC);
   const feed = new Contract(CHAINLINK_BTC_USD_FEED, FEED_ABI, provider);
-  const decimals = Number(await feed.decimals());
-  if (!Number.isInteger(decimals) || decimals < 0) {
-    throw new Error('Invalid decimals returned by Chainlink feed');
+  let decimals: number | null = null;
+
+  try {
+    decimals = Number(await feed.decimals());
+    if (!Number.isInteger(decimals) || decimals < 0) {
+      logger.error(`Invalid decimals returned by Chainlink feed: ${decimals}`);
+      decimals = null;
+    }
+  } catch (error) {
+    if (isNetworkConnectivityError(error)) {
+      logger.warn(
+        `Unable to resolve Chainlink feed decimals due to connectivity issues: ${(error as Error).message}`,
+      );
+    } else {
+      throw error;
+    }
   }
 
-  const newRows: DayPrice[] = [];
-  for (const day of targets) {
-    try {
-      const block = await blockAtEndOfDayUTC(provider, parseDay(day));
-      const round = await feed.latestRoundData({ blockTag: block });
-      const answer = Number(formatUnits(round.answer, decimals));
-      if (!Number.isFinite(answer) || answer <= 0) {
-        throw new Error(`Invalid price ${answer}`);
+  if (decimals !== null) {
+    for (const day of targets) {
+      try {
+        const block = await blockAtEndOfDayUTC(provider, parseDay(day));
+        const round = await feed.latestRoundData({ blockTag: block });
+        const answer = Number(formatUnits(round.answer, decimals));
+        if (!Number.isFinite(answer) || answer <= 0) {
+          throw new Error(`Invalid price ${answer}`);
+        }
+        const row: DayPrice = { day, wbtc_usd: answer.toFixed(2) };
+        newRows.push(row);
+        successfulDays.add(day);
+        logger.info(`Fetched WBTC price ${row.wbtc_usd} for ${day} via Chainlink/Infura.`);
+      } catch (error) {
+        if (isNetworkConnectivityError(error)) {
+          logger.warn(
+            `Connectivity issue while fetching WBTC price for ${day}: ${(error as Error).message}`,
+          );
+        } else {
+          logger.error(`Failed to fetch WBTC price for ${day}: ${(error as Error).message}`);
+        }
       }
-      const row: DayPrice = { day, wbtc_usd: answer.toFixed(2) };
-      newRows.push(row);
-      logger.info(`Fetched WBTC price ${row.wbtc_usd} for ${day} via Chainlink/Infura.`);
-    } catch (error) {
-      logger.error(`Failed to fetch WBTC price for ${day}: ${(error as Error).message}`);
+    }
+  }
+
+  const missingDays = targets.filter((day) => !successfulDays.has(day));
+
+  if (missingDays.length > 0) {
+    logger.warn(`Falling back to HTTP price providers for ${missingDays.join(', ')}.`);
+    const fallbackRows = await fetchFallbackPrices(missingDays);
+    for (const row of fallbackRows) {
+      if (!successfulDays.has(row.day)) {
+        newRows.push(row);
+        successfulDays.add(row.day);
+      }
     }
   }
 
@@ -137,6 +174,66 @@ async function main(): Promise<void> {
 
   upsertRows(DAILY_WBTC_CSV, ['day', 'wbtc_usd'], 'day', newRows);
   logger.info(`Appended ${newRows.length} daily WBTC price rows.`);
+}
+
+function normalizeDailyPoints(points: DailyPricePoint[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const point of points) {
+    if (!point || !point.day) {
+      continue;
+    }
+    if (!Number.isFinite(point.price) || point.price <= 0) {
+      continue;
+    }
+    map.set(point.day, point.price);
+  }
+  return map;
+}
+
+async function fetchFallbackPrices(days: string[]): Promise<DayPrice[]> {
+  if (days.length === 0) {
+    return [];
+  }
+
+  const earliest = days.slice().sort()[0];
+  const rows: DayPrice[] = [];
+  const maps: Map<string, number>[] = [];
+
+  try {
+    const gecko = await fetchCoinGeckoDaily('wrapped-bitcoin', 'wbtc-usd-daily', earliest);
+    maps.push(normalizeDailyPoints(gecko));
+  } catch (error) {
+    logger.error(`CoinGecko fallback failed: ${(error as Error).message}`);
+  }
+
+  try {
+    const cryptoCompare = await fetchCryptoCompareDaily('WBTC', earliest);
+    maps.push(normalizeDailyPoints(cryptoCompare));
+  } catch (error) {
+    logger.error(`CryptoCompare fallback failed: ${(error as Error).message}`);
+  }
+
+  if (maps.length === 0) {
+    return [];
+  }
+
+  for (const day of days) {
+    let price: number | undefined;
+    for (const map of maps) {
+      const candidate = map.get(day);
+      if (candidate !== undefined) {
+        price = candidate;
+        break;
+      }
+    }
+    if (price === undefined) {
+      logger.warn(`No fallback price available for ${day}.`);
+      continue;
+    }
+    rows.push({ day, wbtc_usd: price.toFixed(2) });
+  }
+
+  return rows;
 }
 
 main().catch((error) => {
